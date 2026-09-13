@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}EduFlow 線上購課平台{% endblock %}</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        // 全站深色玻璃配色：brand 改為青綠(teal)色階以呼應登入/註冊頁的玻璃質感，
+                        // 直接改色階數值即可讓全站沿用 brand/jp 語意色名的元件自動套用新配色。
+                        brand: {
+                            50: '#e6fbf6', 100: '#c3f4e9', 200: '#8fe9d6', 300: '#54d8be',
+                            400: '#22c2a5', 500: '#0fa88d', 600: '#0c8f78', 700: '#0b7362',
+                            800: '#0d5b4f', 900: '#0c4a41',
+                        },
+                        // 暖琥珀色作為深色底上的對比點綴（價格、標籤、通知），與青綠主色互補
+                        accent: {
+                            50: '#fff7ed', 100: '#ffedd5', 300: '#fdba74',
+                            400: '#fbbf24', 500: '#f59e0b', 600: '#d97706',
+                        },
+                        // 深色玻璃語意色（背景/卡片/邊框/文字/主色），全站元件直接引用
+                        jp: {
+                            bg: '#0a0e14',
+                            surface: '#12161f',
+                            border: '#242b38',
+                            text: '#e8ecf8',
+                            muted: '#aab2c7',
+                            primary: '#16c2a3',
+                            primaryHover: '#0fa588',
+                            accent: '#fbbf24',
+                        },
+                        // sat.cool 風格深色主題，僅首頁使用，不影響其他頁面既有的 jp/brand 色階
+                        satdark: {
+                            bg: '#030303',
+                            surface: '#17191c',
+                            border: '#2a2d31',
+                            text: '#ffffff',
+                            muted: '#9a9a9a',
+                        },
+                        electric: {
+                            DEFAULT: '#005cff',
+                            hover: '#0047c4',
+                        },
+                    },
+                    fontFamily: { sans: ['"Noto Sans TC"', '"Inter"', 'system-ui', 'sans-serif'] },
+                    keyframes: {
+                        'float': { '0%,100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-12px)' } },
+                        'fade-up': { '0%': { opacity: 0, transform: 'translateY(16px)' }, '100%': { opacity: 1, transform: 'translateY(0)' } },
+                    },
+                    animation: { 'float': 'float 6s ease-in-out infinite', 'fade-up': 'fade-up 0.6s ease-out both' },
+                },
+            },
+        };
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+        html { scroll-behavior: smooth; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .group:hover img.zoom { transform: scale(1.05); }
+        img.zoom { transition: transform 0.4s ease-in-out; }
+        [data-dropdown-menu]:not(.hidden) { animation: dropdown-in 0.18s ease-out both; }
+        @keyframes dropdown-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+        @media (prefers-reduced-motion: reduce) {
+            html { scroll-behavior: auto; }
+            *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+        }
+        /* Django 表單控制項在 EduFlow 版型的統一樣式（與「編輯個人資料」一致）*/
+        .ef-form input:not([type=checkbox]):not([type=radio]):not([type=file]),
+        .ef-form select, .ef-form textarea {
+            width: 100%; border: 1px solid #e2e8f0; border-radius: 0.7rem;
+            padding: 0.65rem 0.85rem; font-size: 0.95rem; background: #fff; color: #0f172a;
+            transition: border-color .15s, box-shadow .15s;
+        }
+        .ef-form input::placeholder, .ef-form textarea::placeholder { color: #94a3b8; }
+        .ef-form input:focus, .ef-form select:focus, .ef-form textarea:focus {
+            outline: none; border-color: #a5b4fc; box-shadow: 0 0 0 3px rgba(99,102,241,.16);
+        }
+        .ef-form textarea { resize: vertical; min-height: 6.5rem; }
+        .ef-form label { font-weight: 700; color: #334155; display: block; margin: 0.8rem 0 0.4rem; }
+        .ef-form p { margin-bottom: 0.9rem; }
+        .ef-form ul.errorlist { color: #dc2626; font-size: 0.85rem; list-style: none; padding: 0; margin: 0.25rem 0; }
+        .ef-form .helptext { color: #94a3b8; font-size: 0.8rem; }
+        .ef-form input[type=file] { font-size: 0.9rem; }
+        .ef-form input[type=checkbox], .ef-form input[type=radio] { accent-color: #6366f1; width: 1rem; height: 1rem; vertical-align: middle; }
+
+        /* ===== iOS 液態玻璃按鈕（Liquid Glass）===== */
+        .btn-glass, .btn-glass-primary {
+            position: relative; display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+            border-radius: 9999px; font-weight: 700; cursor: pointer; overflow: hidden;
+            color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.30);
+            border: 1px solid rgba(255,255,255,.40);
+            -webkit-backdrop-filter: blur(22px) saturate(185%) brightness(1.08);
+            backdrop-filter: blur(22px) saturate(185%) brightness(1.08);
+            box-shadow:
+                inset 0 1px 1px rgba(255,255,255,.75),
+                inset 0 -10px 22px rgba(255,255,255,.10),
+                inset 0 0 0 1px rgba(255,255,255,.06),
+                0 6px 22px rgba(0,0,0,.22);
+            transition: transform .22s cubic-bezier(.2,.8,.2,1), box-shadow .22s ease, background .22s ease;
+        }
+        /* 鏡面高光：頂部亮弧 + 斜向反光帶 */
+        .btn-glass::after, .btn-glass-primary::after {
+            content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+            background:
+                radial-gradient(130% 90% at 28% -10%, rgba(255,255,255,.55), rgba(255,255,255,0) 55%),
+                linear-gradient(180deg, rgba(255,255,255,.20), rgba(255,255,255,0) 42%);
+        }
+        .btn-glass:hover, .btn-glass-primary:hover {
+            transform: translateY(-1px) scale(1.02);
+            box-shadow: inset 0 1px 1px rgba(255,255,255,.85), inset 0 -10px 22px rgba(255,255,255,.14), 0 12px 34px rgba(0,0,0,.30);
+        }
+        .btn-glass:active, .btn-glass-primary:active { transform: translateY(0) scale(.99); }
+        /* 中性玻璃：幾乎透明的清玻璃 */
+        .btn-glass { background: rgba(255,255,255,.10); }
+        .btn-glass:hover { background: rgba(255,255,255,.18); }
+        /* 主色玻璃：極淡藍調透明玻璃 */
+        .btn-glass-primary { background: rgba(90,150,255,.22); }
+        .btn-glass-primary:hover { background: rgba(90,150,255,.32); }
+        @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+            .btn-glass { background: rgba(30,41,59,.88); }
+            .btn-glass-primary { background: rgba(37,99,235,.95); }
+        }
+        /* 液態玻璃圓形箭頭（輪播/區塊切換共用）*/
+        .glass-arrow {
+            height: 2.75rem; width: 2.75rem; display: inline-flex; align-items: center; justify-content: center;
+            border-radius: 9999px; color: #fff; cursor: pointer;
+            border: 1px solid rgba(255,255,255,.40);
+            background: rgba(255,255,255,.10);
+            -webkit-backdrop-filter: blur(18px) saturate(180%); backdrop-filter: blur(18px) saturate(180%);
+            box-shadow: inset 0 1px 1px rgba(255,255,255,.6), 0 4px 16px rgba(0,0,0,.25);
+            transition: transform .2s, background .2s, box-shadow .2s, opacity .2s;
+        }
+        .glass-arrow:hover { background: rgba(255,255,255,.20); transform: translateY(-1px); }
+        .glass-arrow:active { transform: translateY(0); }
+        .glass-arrow:disabled { opacity: .35; cursor: not-allowed; transform: none; }
+        @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+            .glass-arrow { background: rgba(30,41,59,.9); }
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-jp-bg font-sans text-jp-text antialiased">
+
+    {% include 'main/partials/eduflow_navbar.html' %}
+
+    {% block content %}{% endblock %}
+
+    {% include 'main/partials/eduflow_footer.html' %}
+
+    <!-- 回到頂部按鈕 -->
+    <button data-back-to-top class="fixed bottom-6 right-6 z-40 h-12 w-12 rounded-full bg-jp-primary text-white shadow-lg shadow-brand-600/30 hover:bg-jp-primaryHover transition opacity-0 invisible" aria-label="回到頂部">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // 可關閉元素（公告列）
+        document.querySelectorAll('[data-close]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const t = document.querySelector(btn.dataset.close);
+                if (t) t.remove();
+            });
+        });
+
+        // 導覽列搜尋：點圖示展開/收合搜尋列
+        document.querySelectorAll('[data-search-toggle]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('[data-search-panel]').forEach((panel) => {
+                    panel.classList.toggle('hidden');
+                    if (!panel.classList.contains('hidden')) {
+                        const input = panel.querySelector('input[name="q"]');
+                        if (input) input.focus();
+                    }
+                });
+            });
+        });
+
+        // 手機側邊選單
+        const mobileMenu = document.querySelector('[data-mobile-menu]');
+        const openMobile = () => mobileMenu && mobileMenu.classList.remove('hidden');
+        const closeMobile = () => mobileMenu && mobileMenu.classList.add('hidden');
+        document.querySelectorAll('[data-mobile-toggle]').forEach((b) => b.addEventListener('click', openMobile));
+        document.querySelectorAll('[data-mobile-close]').forEach((b) => b.addEventListener('click', closeMobile));
+        mobileMenu && mobileMenu.querySelectorAll('a').forEach((a) => a.addEventListener('click', closeMobile));
+
+        // 橫向輪播
+        document.querySelectorAll('[data-carousel]').forEach((track) => {
+            const name = track.dataset.carousel;
+            const prevBtn = document.querySelector(`[data-carousel-prev="${name}"]`);
+            const nextBtn = document.querySelector(`[data-carousel-next="${name}"]`);
+            const step = () => Math.max(track.clientWidth * 0.8, 300);
+            const updateButtons = () => {
+                const EDGE = 4;
+                const maxScroll = track.scrollWidth - track.clientWidth - EDGE;
+                if (prevBtn) prevBtn.disabled = track.scrollLeft <= EDGE;
+                if (nextBtn) nextBtn.disabled = track.scrollLeft >= maxScroll;
+            };
+            prevBtn && prevBtn.addEventListener('click', () => track.scrollBy({ left: -step(), behavior: 'smooth' }));
+            nextBtn && nextBtn.addEventListener('click', () => track.scrollBy({ left: step(), behavior: 'smooth' }));
+            track.addEventListener('scroll', updateButtons, { passive: true });
+            window.addEventListener('resize', updateButtons);
+            updateButtons();
+        });
+
+        // 捲動：Navbar 陰影 + 回到頂部顯隱
+        const navbar = document.getElementById('navbar');
+        const backToTop = document.querySelector('[data-back-to-top]');
+        const onScroll = () => {
+            const y = window.scrollY;
+            navbar && navbar.classList.toggle('shadow-md', y > 8);
+            if (backToTop) {
+                const show = y > 400;
+                backToTop.classList.toggle('opacity-0', !show);
+                backToTop.classList.toggle('invisible', !show);
+            }
+        };
+        window.addEventListener('scroll', onScroll, { passive: true });
+        onScroll();
+        backToTop && backToTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+    });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

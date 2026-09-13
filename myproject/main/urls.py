@@ -1,0 +1,168 @@
+from django.urls import path
+from . import views
+from django.contrib.auth import views as auth_views
+
+urlpatterns = [
+    path('', views.home, name='home'),
+    path('courses/', views.course_catalog, name='course_catalog'),
+
+    path('course/<int:course_id>/', views.course_detail, name='course_detail'),
+    path('course/<int:course_id>/buy/', views.buy_course, name='buy_course'),
+    path('course/<int:course_id>/checkout/', views.checkout, name='checkout'),
+    path('order/<int:order_id>/payment/', views.payment, name='payment'),
+    path('order/<int:order_id>/success/', views.order_success, name='order_success'),
+    path('course/<int:course_id>/purchase-success/', views.purchase_success, name='purchase_success'),
+    path('course/<int:course_id>/watch/', views.watch_course, name='watch_course'),
+    path('lesson/<int:lesson_id>/watch/', views.watch_lesson, name='watch_lesson'),
+    path('lesson/<int:lesson_id>/progress/', views.save_progress, name='save_progress'),
+    path('lesson/<int:lesson_id>/video/', views.stream_lesson_video, name='stream_lesson_video'),
+    path('course/<int:course_id>/certificate/', views.certificate, name='certificate'),
+    path('teacher/<int:teacher_id>/profile/', views.teacher_profile, name='teacher_profile'),
+    path('course/<int:course_id>/edit/', views.edit_course, name='edit_course'),
+    path('course/<int:course_id>/delete/', views.delete_course, name='delete_course'),
+
+    path('student/dashboard/', views.student_dashboard, name='student_dashboard'),
+    path('student/analytics/', views.student_analytics, name='student_analytics'),
+
+    path('teacher/dashboard/', views.teacher_dashboard, name='teacher_dashboard'),
+    path('teacher/analytics/', views.teacher_analytics, name='teacher_analytics'),
+    path('teacher/qna/', views.teacher_qna, name='teacher_qna'),
+    path('teacher/marketing/apply/', views.submit_marketing_request, name='submit_marketing_request'),
+    path('teacher/marketing/', views.marketing_requests, name='marketing_requests'),
+    path('teacher/marketing/<int:request_id>/plan/', views.marketing_plan_detail, name='marketing_plan_detail'),
+    path('teacher/marketing/<int:request_id>/cancel/', views.cancel_marketing_request, name='cancel_marketing_request'),
+
+    path('export-data/', views.export_data_page, name='export_data_page'),
+    path('analytics/', views.platform_analytics, name='platform_analytics'),
+    path('export/courses.csv', views.export_courses_csv, name='export_courses_csv'),
+    path('export/enrollments.csv', views.export_enrollments_csv, name='export_enrollments_csv'),
+    path('export/learning-records.csv', views.export_learning_records_csv, name='export_learning_records_csv'),
+    path('export/profiles.csv', views.export_profiles_csv, name='export_profiles_csv'),
+
+    path('export/orders.csv', views.export_orders_csv, name='export_orders_csv'),
+    path('export/order-items.csv', views.export_order_items_csv, name='export_order_items_csv'),
+    path('export/payments.csv', views.export_payments_csv, name='export_payments_csv'),
+    path('export/coupon-usage.csv', views.export_coupon_usage_csv, name='export_coupon_usage_csv'),
+    path('export/reviews.csv', views.export_reviews_csv, name='export_reviews_csv'),
+    path('export/course-lessons.csv', views.export_course_lessons_csv, name='export_course_lessons_csv'),
+
+    path('register/', views.register, name='register'),
+    path('register-success/', views.register_success, name='register_success'),
+    path('login/', views.login_view, name='login'),
+    path('logout/', views.logout_view, name='logout'),
+
+    # 快速登入（OAuth）
+    path('oauth/google/login/', views.google_login, name='google_login'),
+    path('oauth/google/callback/', views.google_oauth_callback, name='google_oauth_callback'),
+    path('oauth/line/login/', views.line_login, name='line_login'),
+    path('oauth/line/callback/', views.line_oauth_callback, name='line_oauth_callback'),
+
+    path('profile/', views.profile_view, name='profile'),
+    path('profile/edit/', views.edit_profile, name='edit_profile'),
+    path('my-courses/', views.my_courses, name='my_courses'),
+
+    path('create-course/', views.create_course, name='create_course'),
+
+    # 購物車
+    path('cart/', views.view_cart, name='view_cart'),
+    path('cart/add/<int:course_id>/', views.add_to_cart, name='add_to_cart'),
+    path('cart/add-bundle/<int:bundle_id>/', views.add_bundle_to_cart, name='add_bundle_to_cart'),
+    path('cart/remove/<int:item_id>/', views.remove_from_cart, name='remove_from_cart'),
+    path('cart/checkout/', views.cart_checkout, name='cart_checkout'),
+
+    # 收藏
+    path('favorites/', views.my_favorites, name='my_favorites'),
+    path('favorites/toggle/<int:course_id>/', views.toggle_favorite, name='toggle_favorite'),
+
+    # 退款
+    path('refunds/', views.my_refunds, name='my_refunds'),
+    path('refunds/request/<int:order_id>/', views.request_refund, name='request_refund'),
+
+    # 優惠券領取
+    path('coupons/', views.coupon_list, name='coupon_list'),
+    path('coupons/claim/<int:coupon_id>/', views.claim_coupon, name='claim_coupon'),
+    path('my-coupons/', views.my_coupons, name='my_coupons'),
+
+    # A2 章節/單元管理
+    path('course/<int:course_id>/content/', views.manage_content, name='manage_content'),
+    path('content/chapter/add/<int:course_id>/', views.add_chapter, name='add_chapter'),
+    path('content/chapter/<int:chapter_id>/edit/', views.edit_chapter, name='edit_chapter'),
+    path('content/chapter/<int:chapter_id>/delete/', views.delete_chapter, name='delete_chapter'),
+    path('content/lesson/add/<int:chapter_id>/', views.add_lesson, name='add_lesson'),
+    path('content/lesson/<int:lesson_id>/edit/', views.edit_lesson, name='edit_lesson'),
+    path('content/lesson/<int:lesson_id>/delete/', views.delete_lesson, name='delete_lesson'),
+    path('content/lesson/<int:lesson_id>/material/add/', views.add_material, name='add_material'),
+    path('content/material/<int:material_id>/delete/', views.delete_material, name='delete_material'),
+
+    # A3 退款審核
+    path('refunds/manage/', views.manage_refunds, name='manage_refunds'),
+    path('refunds/<int:refund_id>/process/', views.process_refund, name='process_refund'),
+
+    # A6 通知中心
+    path('notifications/', views.notifications, name='notifications'),
+    path('notifications/read/', views.mark_notifications_read, name='mark_notifications_read'),
+
+    # A7 課程問答
+    path('course/<int:course_id>/question/add/', views.add_question, name='add_question'),
+    path('question/<int:question_id>/answer/', views.add_answer, name='add_answer'),
+
+    # 課程留言區
+    path('course/<int:course_id>/comment/add/', views.add_comment, name='add_comment'),
+
+    # 課程公告
+    path('course/<int:course_id>/announcement/add/', views.add_announcement, name='add_announcement'),
+    path('announcement/<int:announcement_id>/delete/', views.delete_announcement, name='delete_announcement'),
+
+    # AI 課程助教
+    path('course/<int:course_id>/ask-ai/', views.ask_ai, name='ask_ai'),
+
+    # 追蹤講師
+    path('teacher/<int:teacher_id>/follow/', views.toggle_follow, name='toggle_follow'),
+    path('following/', views.my_following, name='my_following'),
+
+    # 講師內容管理：專欄 / 文章 / 教材
+    path('teacher/content/', views.teacher_content, name='teacher_content'),
+    path('teacher/content/column/add/', views.add_column, name='add_column'),
+    path('teacher/content/column/<int:column_id>/edit/', views.edit_column, name='edit_column'),
+    path('teacher/content/column/<int:column_id>/delete/', views.delete_column, name='delete_column'),
+    path('column/<int:column_id>/', views.column_detail, name='column_detail'),
+    path('column/<int:column_id>/subscribe/', views.subscribe_column, name='subscribe_column'),
+    path('teacher/content/article/add/', views.add_article, name='add_article'),
+    path('teacher/content/article/<int:article_id>/edit/', views.edit_article, name='edit_article'),
+    path('teacher/content/article/<int:article_id>/delete/', views.delete_article, name='delete_article'),
+    path('article/<int:article_id>/', views.article_detail, name='article_detail'),
+    path('teacher/content/material/add/', views.add_material, name='add_material'),
+    path('teacher/content/material/<int:material_id>/edit/', views.edit_material, name='edit_material'),
+    path('teacher/content/material/<int:material_id>/delete/', views.delete_material, name='delete_material'),
+
+    # A8 課程審核
+    path('audits/manage/', views.manage_audits, name='manage_audits'),
+    path('audits/<int:audit_id>/process/', views.process_audit, name='process_audit'),
+
+    # A9 分潤收支與提領
+    path('revenue/', views.my_revenue, name='my_revenue'),
+    path('revenue/export.csv', views.export_my_revenue_csv, name='export_my_revenue_csv'),
+    path('teacher/bank-account/', views.edit_bank_account, name='edit_bank_account'),
+    path('withdrawals/', views.my_withdrawals, name='my_withdrawals'),
+    path('withdrawals/export.csv', views.export_my_withdrawals_csv, name='export_my_withdrawals_csv'),
+    path('withdrawals/manage/', views.manage_withdrawals, name='manage_withdrawals'),
+    path('withdrawals/<int:withdrawal_id>/process/', views.process_withdrawal, name='process_withdrawal'),
+
+    path('password-reset/', auth_views.PasswordResetView.as_view(
+        template_name='main/password_reset.html'
+    ), name='password_reset'),
+
+    path('password-reset/done/', auth_views.PasswordResetDoneView.as_view(
+        template_name='main/password_reset_done.html'
+    ), name='password_reset_done'),
+
+    # 少了這兩個，PasswordResetView 在產生信件內容時 reverse
+    # 'password_reset_confirm' 會 NoReverseMatch，整個流程一送出就 500。
+    path('password-reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(
+        template_name='main/password_reset_confirm.html'
+    ), name='password_reset_confirm'),
+
+    path('password-reset/complete/', auth_views.PasswordResetCompleteView.as_view(
+        template_name='main/password_reset_complete.html'
+    ), name='password_reset_complete'),
+]

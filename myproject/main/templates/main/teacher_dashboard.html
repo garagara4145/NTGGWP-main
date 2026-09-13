@@ -1,0 +1,75 @@
+{% extends 'main/base_eduflow.html' %}
+{% block title %}教師專區 | EduFlow{% endblock %}
+
+{% block content %}
+<main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+  <div class="bg-white rounded-2xl ring-1 ring-slate-100 shadow-sm p-8 mb-6">
+    <h1 class="text-2xl font-black text-slate-900 mb-1">教師專區</h1>
+    <p class="text-slate-500 mb-5">歡迎，{{ request.user.username }}。管理你的課程、內容與銷售數據。</p>
+<div class="flex gap-3 flex-wrap">
+  <a href="{% url 'create_course' %}" class="bg-brand-600 hover:bg-brand-700 text-white font-bold px-5 py-2.5 rounded-lg transition">＋ 新增課程</a>
+  <a href="{% url 'teacher_analytics' %}" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-5 py-2.5 rounded-lg transition">課程分析圖表</a>
+  <a href="{% url 'marketing_requests' %}" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-5 py-2.5 rounded-lg transition">行銷申請</a>
+      <a href="{% url 'my_revenue' %}" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-5 py-2.5 rounded-lg transition">我的收支</a>
+      <a href="{% url 'my_withdrawals' %}" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-5 py-2.5 rounded-lg transition">提領申請</a>
+    </div>
+  </div>
+
+  {% if course_data %}
+  <div class="space-y-5">
+    {% for item in course_data %}
+    <div class="bg-white rounded-2xl ring-1 ring-slate-100 shadow-sm p-6">
+      <div class="flex items-center gap-3 flex-wrap mb-3">
+        <h3 class="text-xl font-black text-slate-900">{{ item.course.title }}</h3>
+        {% if item.course.is_published %}
+        <span class="bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full">已上架</span>
+        {% else %}
+        <span class="bg-amber-100 text-amber-700 text-xs font-bold px-3 py-1 rounded-full">審核中／未上架</span>
+        {% endif %}
+        {% if item.course.is_crowdfunding %}
+        <span class="bg-accent-100 text-accent-600 text-xs font-bold px-3 py-1 rounded-full">
+          <i class="fas fa-bullhorn"></i> {% if item.course.is_funding_active %}募資中{% elif item.course.funding_is_goal_met %}募資成功{% else %}募資結束{% endif %}
+        </span>
+        {% endif %}
+      </div>
+      <div class="flex gap-6 flex-wrap text-slate-500 mb-4">
+        <div>
+          價格
+          {% if item.course.has_discount %}
+          <b class="text-red-500 line-through decoration-2 font-normal">NT$ {{ item.course.price }}</b>
+          <b class="text-red-600">NT$ {{ item.course.get_effective_price }}</b>
+          {% else %}
+          <b class="text-slate-800">NT$ {{ item.course.price }}</b>
+          {% endif %}
+        </div>
+        <div>購買 <b class="text-slate-800">{{ item.purchase_count }}</b> 人</div>
+        <div>觀看 <b class="text-slate-800">{{ item.total_watch_minutes }}</b> 分</div>
+        {% if item.average_rating %}<div>評分 <b class="text-amber-500">★ {{ item.average_rating }}</b></div>{% endif %}
+      </div>
+      {% if item.course.is_crowdfunding %}
+      <div class="bg-slate-50 rounded-xl p-4 mb-4">
+        <div class="flex justify-between text-sm mb-1">
+          <span class="font-black {% if item.course.funding_is_goal_met %}text-accent-600{% else %}text-slate-600{% endif %}">{{ item.course.funding_progress_percent }}% 達成</span>
+          <span class="text-slate-400">{{ item.course.funding_backers_count }} / {{ item.course.funding_goal }} 人{% if item.course.is_funding_active %} ・ 剩 {{ item.course.funding_days_left }} 天{% endif %}</span>
+        </div>
+        <div class="h-2 w-full bg-white rounded-full overflow-hidden">
+          <div class="h-full bg-gradient-to-r from-accent-400 to-accent-600 rounded-full" style="width:{{ item.course.funding_progress_percent }}%"></div>
+        </div>
+      </div>
+      {% endif %}
+      <div class="flex gap-2 flex-wrap">
+        <a href="{% url 'manage_content' item.course.id %}" class="bg-brand-600 hover:bg-brand-700 text-white font-bold px-4 py-2 rounded-lg text-sm transition">內容管理</a>
+        <a href="{% url 'edit_course' item.course.id %}" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-lg text-sm transition">編輯課程</a>
+        <a href="{% url 'delete_course' item.course.id %}" class="bg-red-50 hover:bg-red-100 text-red-600 font-bold px-4 py-2 rounded-lg text-sm transition">刪除</a>
+        <a href="{% url 'submit_marketing_request' %}?course={{ item.course.id }}" class="bg-brand-50 hover:bg-brand-100 text-brand-700 font-bold px-4 py-2 rounded-lg text-sm transition">申請行銷</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="bg-white rounded-2xl ring-1 ring-slate-100 shadow-sm p-12 text-center text-slate-500">
+    你目前還沒有建立任何課程。<br>點上方「＋ 新增課程」建立你的第一門課。
+  </div>
+  {% endif %}
+</main>
+{% endblock %}

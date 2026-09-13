@@ -1,0 +1,71 @@
+{% extends 'main/base_eduflow.html' %}
+{% block title %}學生專區 | EduFlow{% endblock %}
+
+{% block content %}
+<main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+  <div class="bg-white rounded-2xl ring-1 ring-slate-100 shadow-sm p-8">
+    <h1 class="text-2xl font-black text-slate-900 mb-1">學生專區</h1>
+    <p class="text-slate-500 mb-6">歡迎，{{ request.user.username }}。在這裡查看我的課程、學習紀錄與學習分析。</p>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-brand-50 rounded-xl p-5">
+        <h3 class="font-bold text-slate-800 mb-1">我的課程</h3>
+        <p class="text-sm text-slate-500 mb-3">查看已購課程與學習進度。</p>
+        <a href="{% url 'my_courses' %}" class="inline-block bg-jp-primary hover:bg-jp-primaryHover text-white font-bold px-4 py-2 rounded-lg text-sm transition">前往</a>
+      </div>
+      <div class="bg-slate-50 rounded-xl p-5">
+        <h3 class="font-bold text-slate-800 mb-2">已購課程數</h3>
+        <div class="text-3xl font-black text-jp-primaryHover">{{ purchased_count }}</div>
+      </div>
+      <div class="bg-slate-50 rounded-xl p-5">
+        <h3 class="font-bold text-slate-800 mb-2">累積學習分鐘</h3>
+        <div class="text-3xl font-black text-jp-primaryHover">{{ total_minutes }}</div>
+      </div>
+      <div class="bg-brand-50 rounded-xl p-5">
+        <h3 class="font-bold text-slate-800 mb-1">學習分析</h3>
+        <p class="text-sm text-slate-500 mb-3">觀看時數、課程比例與紀錄。</p>
+        <a href="{% url 'student_analytics' %}" class="inline-block bg-jp-primary hover:bg-jp-primaryHover text-white font-bold px-4 py-2 rounded-lg text-sm transition">查看圖表</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 連續學習 streak -->
+  <div class="bg-gradient-to-br from-orange-500 to-rose-500 rounded-2xl shadow-sm p-8 mt-6 text-white">
+    <div class="flex items-center justify-between flex-wrap gap-4">
+      <div>
+        <div class="text-sm font-bold opacity-90">連續學習</div>
+        <div class="text-5xl font-black mt-1">🔥 {{ current_streak }} <span class="text-2xl">天</span></div>
+        <p class="opacity-90 mt-2">
+          {% if current_streak == 0 %}今天還沒開始學習，看一段影片就能點燃連續紀錄！
+          {% else %}保持下去！最長紀錄 {{ longest_streak }} 天。{% endif %}
+        </p>
+      </div>
+      <div class="text-right">
+        <div class="text-sm font-bold opacity-90">已獲得徽章</div>
+        <div class="text-4xl font-black mt-1">{{ earned_badge_count }} / {{ badges|length }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 成就徽章 -->
+  <div class="bg-white rounded-2xl ring-1 ring-slate-100 shadow-sm p-8 mt-6">
+    <h2 class="text-xl font-black text-slate-900 mb-5">成就徽章</h2>
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+      {% for b in badges %}
+      <div class="rounded-xl p-4 text-center border {% if b.earned %}border-amber-200 bg-amber-50{% else %}border-slate-100 bg-slate-50 opacity-70{% endif %}">
+        <div class="text-4xl mb-2 {% if not b.earned %}grayscale{% endif %}">{{ b.icon }}</div>
+        <div class="font-bold text-slate-800 text-sm">{{ b.name }}</div>
+        <div class="text-xs text-slate-500 mt-0.5">{{ b.desc }}</div>
+        {% if b.earned %}
+        <div class="text-xs font-bold text-amber-600 mt-2">✓ 已達成</div>
+        {% else %}
+        <div class="mt-2">
+          <div class="h-1.5 bg-slate-200 rounded-full overflow-hidden"><div class="h-full bg-jp-primary" style="width: {{ b.percent }}%"></div></div>
+          <div class="text-xs text-slate-400 mt-1">{{ b.current }} / {{ b.threshold }}</div>
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</main>
+{% endblock %}
