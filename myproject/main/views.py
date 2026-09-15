@@ -64,6 +64,7 @@ from .models import (
     TeacherBankAccount,
     MarketingRequest,
     MarketingPlan,
+    VMAccessRequest,
 )
 
 from .forms import (
@@ -84,6 +85,7 @@ from .forms import (
     MaterialForm,
     TeacherBankAccountForm,
     MarketingRequestForm,
+    VMAccessRequestForm,
 )
 
 from .payments import gateway
@@ -166,6 +168,7 @@ def home(request):
         c.icon = icon
     total_students = Enrollment.objects.values('student').distinct().count()
     total_courses = Course.objects.filter(is_published=True).count()
+    total_teachers = Course.objects.filter(is_published=True).values('teacher').distinct().count()
     avg_all = Review.objects.aggregate(a=Avg('rating'))['a']
     avg_all = round(avg_all, 1) if avg_all else 4.8
 
@@ -189,19 +192,38 @@ def home(request):
         ).order_by('funding_end_date')[:10]
     )
 
+    # 首頁「課程牆」3D 展示區：五欄各 8 張課程封面圖，各欄用不同起始位移
+    # 取值，避免每欄畫面一模一樣。圖片數不足時允許重複，只有完全沒有
+    # 課程封面圖時才整個區塊不顯示（模板用 {% if showcase_columns %} 判斷）。
+    showcase_columns = []
+    showcase_image_urls = [c.image.url for c in base_pub.exclude(image='') if c.image]
+    if showcase_image_urls:
+        SHOWCASE_COLUMNS = 5
+        SHOWCASE_IMAGES_PER_COLUMN = 8
+        n = len(showcase_image_urls)
+        showcase_columns = [
+            [showcase_image_urls[(col * 3 + i) % n] for i in range(SHOWCASE_IMAGES_PER_COLUMN)]
+            for col in range(SHOWCASE_COLUMNS)
+        ]
+
+    from . import ai_assistant
+
     return render(request, 'main/home.html', {
         'page_obj': page_obj,
         'sort': sort,
         'q': q,
         'cat': cat,
         'categories': categories,
+        'platform_faqs': ai_assistant.PLATFORM_FAQS,
         'total_students': total_students,
         'total_courses': total_courses,
+        'total_teachers': total_teachers,
         'avg_all': avg_all,
         'popular_courses': popular_courses,
         'latest_courses': latest_courses,
         'hero_courses': hero_courses,
         'funding_courses': funding_courses,
+        'showcase_columns': showcase_columns,
         'sort_options': [
             ('newest', '最新'),
             ('popular', '熱門'),
@@ -353,8 +375,11 @@ def course_detail(request, course_id):
     )['total'] or 0
     student_count = Enrollment.objects.filter(course=course).count()
 
+    from . import ai_assistant
+
     return render(request, 'main/course_detail.html', {
         'course': course,
+        'platform_faqs': ai_assistant.PLATFORM_FAQS,
         'already_purchased': already_purchased,
         'chapters': chapters,
         'reviews': reviews,
@@ -571,7 +596,6 @@ def teacher_dashboard(request):
     })
 
 
-
 @login_required
 def submit_marketing_request(request):
     try:
@@ -684,6 +708,46 @@ def cancel_marketing_request(request, request_id):
         )
 
     return redirect('marketing_requests')
+
+
+@login_required
+def request_vm_access(request):
+    """學生申請 Mac 用虛擬機：只能挑自己實際購買過的課程。"""
+    has_purchase = Enrollment.objects.filter(student=request.user).exists()
+    if not has_purchase:
+        return render(request, 'main/vm_request_form.html', {
+            'form': None,
+            'no_purchase': True,
+        })
+
+    if request.method == 'POST':
+        form = VMAccessRequestForm(request.POST, student=request.user)
+        if form.is_valid():
+            vm_request = form.save(commit=False)
+            vm_request.student = request.user
+            vm_request.status = 'pending'
+            vm_request.save()
+
+            Notification.objects.create(
+                user=request.user,
+                title='虛擬機申請已送出',
+                content=f'你申請的「{vm_request.course.title}」虛擬機使用申請已送出，等待管理員確認購課紀錄後核發。'
+            )
+
+            return redirect('my_vm_requests')
+    else:
+        form = VMAccessRequestForm(student=request.user)
+
+    return render(request, 'main/vm_request_form.html', {'form': form})
+
+
+@login_required
+def my_vm_requests(request):
+    """學生查看自己的虛擬機申請與核發資訊。"""
+    vm_requests = VMAccessRequest.objects.filter(
+        student=request.user
+    ).select_related('course').order_by('-created_at')
+    return render(request, 'main/vm_requests.html', {'vm_requests': vm_requests})
 
 
 @login_required
@@ -2196,7 +2260,7 @@ def edit_lesson(request, lesson_id):
 
 
 @login_required
-def add_material(request, lesson_id):
+def add_lesson_material(request, lesson_id):
     """單元教材上傳（課程講師本人）。"""
     lesson = get_object_or_404(CourseLesson, id=lesson_id)
     course, redirect_resp = _require_course_teacher(request, lesson.chapter.course_id)
@@ -2342,6 +2406,14 @@ def add_question(request, course_id):
                     title='課程有新提問',
                     content=f'課程「{course.title}」收到新的問題：{q.title}'
                 )
+
+                from . import ai_assistant
+                if ai_assistant.auto_answer_question(q):
+                    Notification.objects.create(
+                        user=q.user,
+                        title='AI 助教已回覆你的提問',
+                        content=f'課程「{course.title}」中你的問題「{q.title}」已有 AI 助教的參考回覆，講師稍後仍會親自確認。'
+                    )
 
     return redirect('course_detail', course_id=course.id)
 
@@ -2763,6 +2835,43 @@ def certificate(request, course_id):
 # Task 4 講師公開頁
 # =========================
 
+def teacher_catalog(request):
+    """講師總覽：列出所有有公開課程的講師，供首頁「講師」入口點進來瀏覽。"""
+    q = request.GET.get('q', '').strip()
+
+    teacher_ids = (
+        Course.objects.filter(is_published=True)
+        .values_list('teacher_id', flat=True)
+        .distinct()
+    )
+    teachers = User.objects.filter(id__in=teacher_ids).select_related('profile')
+    if q:
+        teachers = teachers.filter(
+            Q(username__icontains=q)
+            | Q(first_name__icontains=q)
+            | Q(last_name__icontains=q)
+        )
+
+    review_stats = Review.objects.filter(course__teacher=OuterRef('pk')).values('course__teacher')
+    teachers = teachers.annotate(
+        course_count=Count('course', filter=Q(course__is_published=True), distinct=True),
+        student_count=Count('course__enrollment', distinct=True),
+        avg_rating_raw=Subquery(
+            review_stats.annotate(a=Avg('rating')).values('a')[:1],
+            output_field=FloatField()),
+    ).order_by('-course_count', '-student_count', 'username')
+
+    teachers = list(teachers)
+    for t in teachers:
+        t.avg_rating = round(t.avg_rating_raw, 1) if t.avg_rating_raw else None
+
+    return render(request, 'main/teacher_catalog.html', {
+        'teachers': teachers,
+        'q': q,
+        'total_teachers': len(teachers),
+    })
+
+
 def teacher_profile(request, teacher_id):
     teacher = get_object_or_404(User, id=teacher_id)
 
@@ -2870,8 +2979,13 @@ def toggle_follow(request, teacher_id):
             existing.delete()
         else:
             TeacherFollow.objects.create(follower=request.user, teacher=teacher)
-    next_url = request.POST.get('next') or reverse('teacher_profile', args=[teacher.id])
-    return redirect(next_url)
+    default_url = reverse('teacher_profile', args=[teacher.id])
+    next_url = request.POST.get('next')
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        return redirect(next_url)
+    return redirect(default_url)
 
 
 @login_required
@@ -3136,7 +3250,37 @@ def ask_ai(request, course_id):
         question = request.POST.get('question', '')
 
     from . import ai_assistant
+
+    # 先比對固定 FAQ（觀看課程方法／付費方式／課程遺失／忘記帳密等），
+    # 命中就直接回答，完全不呼叫 AI API、不吃額度。
+    faq = ai_assistant.match_platform_faq(question)
+    if faq:
+        return JsonResponse({'ok': True, 'answer': faq['answer'], 'faq': True})
+
     result = ai_assistant.answer_course_question(course, question)
+    return JsonResponse(result)
+
+
+@login_required
+def ask_platform_ai(request):
+    """首頁 AI 助手問答（平台 FAQ + 課程推薦，POST，回傳 JSON）。限已登入使用者。"""
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': '方法不允許。'}, status=405)
+
+    try:
+        payload = json.loads(request.body.decode('utf-8'))
+        question = payload.get('question', '')
+    except (ValueError, AttributeError):
+        question = request.POST.get('question', '')
+
+    from . import ai_assistant
+
+    # 先比對固定 FAQ，命中就直接回答，完全不呼叫 AI API、不吃額度。
+    faq = ai_assistant.match_platform_faq(question)
+    if faq:
+        return JsonResponse({'ok': True, 'answer': faq['answer'], 'faq': True})
+
+    result = ai_assistant.answer_platform_question(question)
     return JsonResponse(result)
 
 
@@ -3343,6 +3487,7 @@ def _post_login_redirect(user):
     return redirect('home')
 
 
+@login_required
 def add_announcement(request, course_id):
     course, redirect_resp = _require_course_teacher(request, course_id)
     if redirect_resp:
@@ -3373,7 +3518,11 @@ def add_announcement(request, course_id):
     return redirect('manage_content', course_id=course.id)
 
 
+@login_required
 def add_bundle_to_cart(request, bundle_id):
+    if request.method != 'POST':
+        return redirect('view_cart')
+
     bundle = get_object_or_404(CourseBundle, id=bundle_id, is_active=True)
     courses = list(bundle.courses.all())
 
@@ -3392,6 +3541,7 @@ def add_bundle_to_cart(request, bundle_id):
     return redirect('view_cart')
 
 
+@login_required
 def add_comment(request, course_id):
     course = get_object_or_404(Course, id=course_id)
 
@@ -3455,6 +3605,7 @@ def course_catalog(request):
     })
 
 
+@login_required
 def delete_announcement(request, announcement_id):
     announcement = get_object_or_404(CourseAnnouncement, id=announcement_id)
     course, redirect_resp = _require_course_teacher(request, announcement.course_id)
@@ -3531,6 +3682,7 @@ def line_oauth_callback(request):
     return _post_login_redirect(user)
 
 
+@login_required
 def teacher_qna(request):
     try:
         profile = request.user.profile
@@ -3542,8 +3694,9 @@ def teacher_qna(request):
     questions = CourseQuestion.objects.filter(
         course__teacher=request.user
     ).select_related('user', 'course').prefetch_related('answers').annotate(
-        answer_count=Count('answers')
-    ).order_by('answer_count', '-created_at')
+        human_answer_count=Count('answers', filter=Q(answers__is_ai_generated=False)),
+        ai_answer_count=Count('answers', filter=Q(answers__is_ai_generated=True)),
+    ).order_by('human_answer_count', '-created_at')
 
     return render(request, 'main/teacher_qna.html', {
         'questions': questions,

@@ -1,4 +1,4 @@
-from django.urls import path
+﻿from django.urls import path
 from . import views
 from django.contrib.auth import views as auth_views
 
@@ -17,6 +17,7 @@ urlpatterns = [
     path('lesson/<int:lesson_id>/progress/', views.save_progress, name='save_progress'),
     path('lesson/<int:lesson_id>/video/', views.stream_lesson_video, name='stream_lesson_video'),
     path('course/<int:course_id>/certificate/', views.certificate, name='certificate'),
+    path('teachers/', views.teacher_catalog, name='teacher_catalog'),
     path('teacher/<int:teacher_id>/profile/', views.teacher_profile, name='teacher_profile'),
     path('course/<int:course_id>/edit/', views.edit_course, name='edit_course'),
     path('course/<int:course_id>/delete/', views.delete_course, name='delete_course'),
@@ -27,6 +28,8 @@ urlpatterns = [
     path('teacher/dashboard/', views.teacher_dashboard, name='teacher_dashboard'),
     path('teacher/analytics/', views.teacher_analytics, name='teacher_analytics'),
     path('teacher/qna/', views.teacher_qna, name='teacher_qna'),
+
+    # AI 行銷企劃申請
     path('teacher/marketing/apply/', views.submit_marketing_request, name='submit_marketing_request'),
     path('teacher/marketing/', views.marketing_requests, name='marketing_requests'),
     path('teacher/marketing/<int:request_id>/plan/', views.marketing_plan_detail, name='marketing_plan_detail'),
@@ -61,6 +64,10 @@ urlpatterns = [
     path('profile/edit/', views.edit_profile, name='edit_profile'),
     path('my-courses/', views.my_courses, name='my_courses'),
 
+    # Mac 虛擬機申請
+    path('vm/apply/', views.request_vm_access, name='request_vm_access'),
+    path('vm/', views.my_vm_requests, name='my_vm_requests'),
+
     path('create-course/', views.create_course, name='create_course'),
 
     # 購物車
@@ -91,7 +98,7 @@ urlpatterns = [
     path('content/lesson/add/<int:chapter_id>/', views.add_lesson, name='add_lesson'),
     path('content/lesson/<int:lesson_id>/edit/', views.edit_lesson, name='edit_lesson'),
     path('content/lesson/<int:lesson_id>/delete/', views.delete_lesson, name='delete_lesson'),
-    path('content/lesson/<int:lesson_id>/material/add/', views.add_material, name='add_material'),
+    path('content/lesson/<int:lesson_id>/material/add/', views.add_lesson_material, name='add_lesson_material'),
     path('content/material/<int:material_id>/delete/', views.delete_material, name='delete_material'),
 
     # A3 退款審核
@@ -115,6 +122,7 @@ urlpatterns = [
 
     # AI 課程助教
     path('course/<int:course_id>/ask-ai/', views.ask_ai, name='ask_ai'),
+    path('ask-platform-ai/', views.ask_platform_ai, name='ask_platform_ai'),
 
     # 追蹤講師
     path('teacher/<int:teacher_id>/follow/', views.toggle_follow, name='toggle_follow'),
@@ -131,9 +139,9 @@ urlpatterns = [
     path('teacher/content/article/<int:article_id>/edit/', views.edit_article, name='edit_article'),
     path('teacher/content/article/<int:article_id>/delete/', views.delete_article, name='delete_article'),
     path('article/<int:article_id>/', views.article_detail, name='article_detail'),
-    path('teacher/content/material/add/', views.add_material, name='add_material'),
-    path('teacher/content/material/<int:material_id>/edit/', views.edit_material, name='edit_material'),
-    path('teacher/content/material/<int:material_id>/delete/', views.delete_material, name='delete_material'),
+    path('teacher/content/material/add/', views.add_material, name='add_teacher_material'),
+    path('teacher/content/material/<int:material_id>/edit/', views.edit_material, name='edit_teacher_material'),
+    path('teacher/content/material/<int:material_id>/delete/', views.delete_material, name='delete_teacher_material'),
 
     # A8 課程審核
     path('audits/manage/', views.manage_audits, name='manage_audits'),

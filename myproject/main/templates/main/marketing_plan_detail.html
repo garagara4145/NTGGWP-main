@@ -17,13 +17,13 @@
         <p class="text-slate-500 mt-1">{{ marketing_request.get_goal_display }} / 申請於 {{ marketing_request.created_at|date:"Y/m/d H:i" }}</p>
       </div>
       {% if marketing_request.status == 'pending' %}
-      <span class="bg-amber-100 text-amber-700 text-xs font-bold px-3 py-1 rounded-full">待處理</span>
+      <span class="bg-amber-50 text-amber-700 text-xs font-bold px-3 py-1 rounded-full">待處理</span>
       {% elif marketing_request.status == 'processing' %}
-      <span class="bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1 rounded-full">處理中</span>
+      <span class="bg-blue-50 text-blue-700 text-xs font-bold px-3 py-1 rounded-full">處理中</span>
       {% elif marketing_request.status == 'completed' %}
-      <span class="bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full">已完成</span>
+      <span class="bg-green-50 text-green-700 text-xs font-bold px-3 py-1 rounded-full">已完成</span>
       {% else %}
-      <span class="bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-full">已退回</span>
+      <span class="bg-red-50 text-red-700 text-xs font-bold px-3 py-1 rounded-full">已退回</span>
       {% endif %}
     </div>
 

@@ -67,17 +67,23 @@
     background: hsl(0 0% 100% / 0.04); transition: background .15s;
   }
   .glass-oauth:hover { background: hsl(0 0% 100% / 0.1); }
-  .glass-oauth.line { background: #06C755; border-color: transparent; color: #fff; }
-  .glass-oauth.line:hover { background: #05b34c; }
   .glass-link { color: hsl(172 70% 62%); }
   .glass-link:hover { text-decoration: underline; }
-  .glass-sep { height: 1px; background: hsl(0 0% 100% / 0.14); }
+  /* 分隔線：刻度線，與登入頁同款 */
+  .glass-sep {
+    height: 7px;
+    background-image: linear-gradient(90deg, hsl(0 0% 100% / .3) 1px, transparent 1px);
+    background-size: 11px 100%;
+    background-position: center;
+    -webkit-mask-image: linear-gradient(180deg, transparent, #000 45%, #000 55%, transparent);
+    mask-image: linear-gradient(180deg, transparent, #000 45%, #000 55%, transparent);
+  }
 </style>
 
 <section class="glass-login">
   <div class="glass-card">
-    <h1 class="text-2xl font-black mb-1">註冊帳號</h1>
-    <p class="g-sub mb-6 text-sm">填寫帳號資訊即可註冊，所有新帳號皆為學生身分；教師權限由平台審核後開通。</p>
+    <h1 class="font-display italic text-3xl font-medium mb-1">註冊帳號</h1>
+    <p class="g-sub mb-6 text-sm">填寫帳號資訊即可註冊。</p>
 
     <div class="ef-form">
       <form method="post">
@@ -89,14 +95,13 @@
 
     <div class="flex items-center gap-3 my-5">
       <div class="glass-sep flex-1"></div>
-      <span class="text-xs g-muted">或使用快速註冊 / 登入</span>
+      <span class="text-xs g-muted">或使用快速註冊</span>
       <div class="glass-sep flex-1"></div>
     </div>
     <div class="space-y-3">
       <a href="{% url 'google_login' %}" class="glass-oauth"><span>使用 Google 繼續</span></a>
-      <a href="{% url 'line_login' %}" class="glass-oauth line"><span>使用 LINE 繼續</span></a>
     </div>
-    <p class="text-xs g-muted mt-2 text-center">透過快速登入（Google／LINE）建立的帳號預設為學生身分。</p>
+    <p class="text-xs g-muted mt-2 text-center">透過快速登入（Google）建立的帳號預設為學生身分。</p>
 
     <p class="text-sm g-muted mt-4 text-center">已經有帳號了？<a href="{% url 'login' %}" class="glass-link">前往登入</a></p>
   </div>

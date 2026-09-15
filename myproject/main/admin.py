@@ -46,6 +46,7 @@ from .models import (
     TeacherBankAccount,
     MarketingRequest,
     MarketingPlan,
+    VMAccessRequest,
 )
 
 # ===== 後台品牌 =====
@@ -699,9 +700,9 @@ class CourseQuestionAdmin(admin.ModelAdmin):
 
 @admin.register(CourseAnswer)
 class CourseAnswerAdmin(admin.ModelAdmin):
-    list_display = ('question', 'user', 'created_at')
+    list_display = ('question', 'user', 'is_ai_generated', 'created_at')
     search_fields = ('question__title', 'user__username', 'content')
-    list_filter = ('created_at',)
+    list_filter = ('is_ai_generated', 'created_at')
     autocomplete_fields = ('question', 'user')
 
 
@@ -780,17 +781,10 @@ _CUSTOM_GROUPS = [
     ('📚 課程管理', ['Course', 'CourseCategory', 'CourseChapter', 'CourseLesson', 'CourseAudit', 'CourseBundle', 'CourseAnnouncement']),
     ('🧾 交易管理', ['Order', 'OrderItem', 'Payment', 'Refund', 'Enrollment']),
     ('💰 分潤與提領', ['CourseSplitSetting', 'RevenueRecord', 'WithdrawalRequest', 'TeacherBankAccount']),
-    ('🎯 行銷管理', [
-        'MarketingRequest',
-        'MarketingPlan',
-        'Coupon',
-        'UserCoupon',
-        'CouponUsage',
-        'Promotion',
-        'Cart',
-    ]),
+    ('🎯 行銷管理', ['MarketingRequest', 'MarketingPlan', 'Coupon', 'UserCoupon', 'CouponUsage', 'Promotion', 'Cart']),
     ('📝 講師內容', ['TeacherColumn', 'TeacherArticle', 'TeacherMaterial', 'ColumnSubscription']),
     ('👥 會員與互動', ['Profile', 'TeacherFollow', 'UserBadge', 'LearningRecord', 'LessonProgress', 'Favorite', 'Review', 'Notification', 'CourseQuestion', 'CourseAnswer', 'CourseComment']),
+    ('🖥️ 虛擬機服務', ['VMAccessRequest']),
 ]
 
 _ORDER_INDEX = {
@@ -860,8 +854,32 @@ def _grouped_get_app_list(self, request, app_label=None):
 admin.AdminSite.get_app_list = _grouped_get_app_list
 
 
+class MarketingRequestAdminForm(forms.ModelForm):
+    class Meta:
+        model = MarketingRequest
+        fields = '__all__'
+
+    def clean(self):
+        cleaned = super().clean()
+        # 「已完成」代表老師點進去看得到企劃內容，所以在編輯頁手動把狀態改成
+        # 已完成時，也要跟批次動作 mark_completed 一樣先檢查有沒有已核准的企劃，
+        # 否則老師點進去只會看到空白的「目前沒有可顯示的行銷企劃」。
+        if cleaned.get('status') == 'completed' and self.instance.pk:
+            has_approved_plan = MarketingPlan.objects.filter(
+                marketing_request=self.instance, status='approved'
+            ).exists()
+            if not has_approved_plan:
+                raise forms.ValidationError(
+                    '這筆申請還沒有已核准的企劃，無法標記為已完成。'
+                    '請先用「AI 生成行銷企劃」產生，並在 AI 行銷企劃列表核准。'
+                )
+        return cleaned
+
+
 @admin.register(MarketingRequest)
 class MarketingRequestAdmin(admin.ModelAdmin):
+    form = MarketingRequestAdminForm
+
     list_display = (
         'course',
         'teacher',
@@ -931,12 +949,6 @@ class MarketingRequestAdmin(admin.ModelAdmin):
         ),
     )
 
-    actions = [
-        'mark_processing',
-        'mark_completed',
-        'mark_rejected',
-    ]
-
     @admin.display(description='行銷目的')
     def goal_display(self, obj):
         return obj.get_goal_display()
@@ -956,7 +968,6 @@ class MarketingRequestAdmin(admin.ModelAdmin):
             status='processing',
             updated_at=timezone.now(),
         )
-
         self.message_user(
             request,
             f'已將 {count} 筆行銷申請標記為處理中。'
@@ -964,17 +975,29 @@ class MarketingRequestAdmin(admin.ModelAdmin):
 
     @admin.action(description='標記為已完成')
     def mark_completed(self, request, queryset):
-        count = queryset.filter(
-            status='processing'
-        ).update(
+        # 「已完成」代表老師已經能看到企劃內容，所以只能套用在已核准企劃的申請上，
+        # 避免像手動改狀態那樣，跳過生成／核准企劃卻把申請標記完成，
+        # 造成老師點進去卻「目前沒有可顯示的行銷企劃」的空狀態。
+        eligible = queryset.filter(
+            status='processing',
+            plan__status='approved',
+        )
+        skipped = queryset.filter(status='processing').exclude(id__in=eligible).count()
+        count = eligible.update(
             status='completed',
             updated_at=timezone.now(),
         )
-
         self.message_user(
             request,
             f'已將 {count} 筆行銷申請標記為已完成。'
         )
+        if skipped:
+            self.message_user(
+                request,
+                f'{skipped} 筆申請尚未有已核准的企劃，請先用「AI 生成行銷企劃」產生，'
+                f'並在 AI 行銷企劃列表核准後，才能標記為已完成。',
+                level='warning',
+            )
 
     @admin.action(description='退回行銷申請')
     def mark_rejected(self, request, queryset):
@@ -984,7 +1007,6 @@ class MarketingRequestAdmin(admin.ModelAdmin):
             status='rejected',
             updated_at=timezone.now(),
         )
-
         self.message_user(
             request,
             f'已退回 {count} 筆行銷申請。'
@@ -1183,3 +1205,91 @@ class MarketingPlanAdmin(admin.ModelAdmin):
                 self.message_user(request, f'重新生成失敗: {msg}', level='error')
         if success_count:
             self.message_user(request, f'已重新生成 {success_count} 份 AI 行銷企劃。')
+
+
+class VMAccessRequestAdminForm(forms.ModelForm):
+    class Meta:
+        model = VMAccessRequest
+        fields = '__all__'
+
+    def clean(self):
+        cleaned = super().clean()
+        # 「已核發」代表學生點進去就看得到可用的網址/帳號/密碼，所以狀態改成
+        # approved 時必須三個欄位都填好，否則跟行銷企劃那次一樣，會出現
+        # 學生點進去卻是空白核發內容的矛盾狀態。
+        if cleaned.get('status') == 'approved':
+            missing = [
+                label for field, label in (
+                    ('vm_url', '虛擬機網址'),
+                    ('vm_username', '虛擬機帳號'),
+                    ('vm_password', '虛擬機密碼'),
+                )
+                if not (cleaned.get(field) or '').strip()
+            ]
+            if missing:
+                raise forms.ValidationError(
+                    f'標記為已核發前，請先填寫：{"、".join(missing)}。'
+                )
+        return cleaned
+
+
+@admin.register(VMAccessRequest)
+class VMAccessRequestAdmin(admin.ModelAdmin):
+    form = VMAccessRequestAdminForm
+
+    list_display = ('student', 'course', 'status_badge', 'created_at', 'approved_at')
+    list_filter = ('status', 'created_at')
+    search_fields = ('student__username', 'student__email', 'course__title')
+    list_select_related = ('student', 'course')
+    list_per_page = 25
+    readonly_fields = ('created_at', 'updated_at', 'approved_at')
+    actions = ['reject_requests']
+
+    fieldsets = (
+        ('申請資訊（先確認申請人確實購買過此課程）', {
+            'fields': ('student', 'course', 'reason'),
+        }),
+        ('核發虛擬機連線資訊', {
+            'fields': ('vm_url', 'vm_username', 'vm_password'),
+            'description': '三個欄位都填好、狀態改成「已核發」並儲存後，系統會自動通知學生。',
+        }),
+        ('後台處理', {
+            'fields': ('status', 'admin_note'),
+        }),
+        ('時間', {
+            'fields': ('created_at', 'updated_at', 'approved_at'),
+        }),
+    )
+
+    @admin.display(description='申請狀態')
+    def status_badge(self, obj):
+        return status_badge(obj.status, obj.get_status_display())
+
+    def save_model(self, request, obj, form, change):
+        was_approved = False
+        if change and obj.pk:
+            was_approved = VMAccessRequest.objects.filter(
+                pk=obj.pk, status='approved'
+            ).exists()
+
+        if obj.status == 'approved' and not obj.approved_at:
+            obj.approved_at = timezone.now()
+
+        super().save_model(request, obj, form, change)
+
+        if obj.status == 'approved' and not was_approved:
+            Notification.objects.create(
+                user=obj.student,
+                title='虛擬機已核發',
+                content=(
+                    f'你申請的「{obj.course.title}」虛擬機已核發，'
+                    f'請至「我的虛擬機」頁面查看連線資訊。'
+                )
+            )
+
+    @admin.action(description='退回選取的申請')
+    def reject_requests(self, request, queryset):
+        count = queryset.exclude(status='approved').update(
+            status='rejected', updated_at=timezone.now()
+        )
+        self.message_user(request, f'已退回 {count} 筆虛擬機申請。')

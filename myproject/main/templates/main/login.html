@@ -68,16 +68,22 @@
     background: hsl(0 0% 100% / 0.04); transition: background .15s;
   }
   .glass-oauth:hover { background: hsl(0 0% 100% / 0.1); }
-  .glass-oauth.line { background: #06C755; border-color: transparent; color: #fff; }
-  .glass-oauth.line:hover { background: #05b34c; }
   .glass-link { color: hsl(172 70% 62%); }
   .glass-link:hover { text-decoration: underline; }
-  .glass-sep { height: 1px; background: hsl(0 0% 100% / 0.14); }
+  /* 分隔線：刻度線，呼應課程章節／進度的視覺語彙 */
+  .glass-sep {
+    height: 7px;
+    background-image: linear-gradient(90deg, hsl(0 0% 100% / .3) 1px, transparent 1px);
+    background-size: 11px 100%;
+    background-position: center;
+    -webkit-mask-image: linear-gradient(180deg, transparent, #000 45%, #000 55%, transparent);
+    mask-image: linear-gradient(180deg, transparent, #000 45%, #000 55%, transparent);
+  }
 </style>
 
 <section class="glass-login">
   <div class="glass-card">
-    <h1 class="text-2xl font-black mb-1">登入</h1>
+    <h1 class="font-display italic text-3xl font-medium mb-1">登入</h1>
     <p class="g-sub mb-6 text-sm">輸入帳號名稱或 Gmail 與密碼登入平台。</p>
 
     {% if error_message %}
@@ -104,7 +110,6 @@
     </div>
     <div class="space-y-3">
       <a href="{% url 'google_login' %}" class="glass-oauth"><span>使用 Google 登入</span></a>
-      <a href="{% url 'line_login' %}" class="glass-oauth line"><span>使用 LINE 登入</span></a>
     </div>
 
     <div class="flex items-center justify-between mt-5 text-sm">
