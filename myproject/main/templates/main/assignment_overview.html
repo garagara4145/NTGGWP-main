@@ -1,0 +1,98 @@
+{% extends 'main/base_eduflow.html' %}
+{% block title %}作業總覽 - EduFlow{% endblock %}
+
+{% block content %}
+<main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <header class="bg-white rounded-2xl ring-1 ring-slate-100 shadow-sm p-6 sm:p-8 mb-5">
+    <p class="text-sm font-bold text-teal-700">EduFlow 學習管理</p>
+    <h1 class="text-2xl sm:text-3xl font-black text-slate-900 mt-1">{% if is_teacher_view %}作業批改總覽{% else %}作業總覽與待辦清單{% endif %}</h1>
+    <p class="text-slate-500 mt-2">{% if is_teacher_view %}集中查看待批改繳交，並追蹤各份作業的繳交狀況。{% else %}查看所有已選課程的作業、截止時間與老師回饋。{% endif %}</p>
+  </header>
+
+  {% if is_teacher_view %}
+  <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+    <div class="rounded-xl bg-white ring-1 ring-slate-100 p-5"><p class="text-sm text-slate-500">作業總數</p><p class="text-3xl font-black text-slate-900 mt-1">{{ assignment_count }}</p></div>
+    <div class="rounded-xl bg-amber-50 ring-1 ring-amber-100 p-5"><p class="text-sm text-amber-800">待批改</p><p class="text-3xl font-black text-amber-900 mt-1">{{ pending_count }}</p></div>
+    <div class="rounded-xl bg-emerald-50 ring-1 ring-emerald-100 p-5"><p class="text-sm text-emerald-800">已批改繳交</p><p class="text-3xl font-black text-emerald-900 mt-1">{{ graded_count }}</p></div>
+    <div class="rounded-xl bg-violet-50 ring-1 ring-violet-100 p-5"><p class="text-sm text-violet-800">平均得分</p><p class="text-3xl font-black text-violet-900 mt-1">{% if average_score != None %}{{ average_score|floatformat:1 }}{% else %}—{% endif %}</p></div>
+  </section>
+
+  <section class="bg-white rounded-2xl ring-1 ring-slate-100 shadow-sm p-5 sm:p-6 mb-6">
+    <div class="flex flex-wrap justify-between items-center gap-3 mb-4"><div><h2 class="text-xl font-black text-slate-900">繳交紀錄</h2><p class="text-sm text-slate-500 mt-1">可依課程與批改狀態查看，待批改項目優先顯示較早繳交的作業。</p></div><span class="rounded-full bg-amber-100 text-amber-900 px-3 py-1 text-sm font-bold">{{ pending_count }} 份待批改</span></div>
+    <form method="get" class="flex flex-wrap items-end gap-3 mb-5 rounded-xl bg-slate-50 p-4">
+      <label class="text-sm font-bold text-slate-700">搜尋<input type="search" name="q" value="{{ search_query }}" placeholder="學生、課程或作業" class="mt-1 block w-52 rounded-lg border-slate-200 px-3 py-2"></label>
+      <label class="text-sm font-bold text-slate-700">課程<select name="course" class="mt-1 block min-w-48 rounded-lg border-slate-200 px-3 py-2"><option value="">所有課程</option>{% for course in courses %}<option value="{{ course.id }}" {% if selected_course == course.id|stringformat:'s' %}selected{% endif %}>{{ course.title }}</option>{% endfor %}</select></label>
+      <label class="text-sm font-bold text-slate-700">批改狀態<select name="status" class="mt-1 block rounded-lg border-slate-200 px-3 py-2"><option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>待批改</option><option value="graded" {% if status_filter == 'graded' %}selected{% endif %}>已批改</option><option value="all" {% if status_filter == 'all' %}selected{% endif %}>全部繳交</option></select></label>
+      <label class="text-sm font-bold text-slate-700">截止時間<select name="due" class="mt-1 block rounded-lg border-slate-200 px-3 py-2"><option value="all" {% if due_filter == 'all' %}selected{% endif %}>全部</option><option value="upcoming" {% if due_filter == 'upcoming' %}selected{% endif %}>尚未截止</option><option value="overdue" {% if due_filter == 'overdue' %}selected{% endif %}>已過截止</option><option value="none" {% if due_filter == 'none' %}selected{% endif %}>無期限</option></select></label>
+      <button class="bg-slate-800 hover:bg-slate-700 text-white font-bold px-4 py-2 rounded-lg text-sm">套用篩選</button>
+      <a href="{% url 'export_assignment_grades' %}{% if selected_course %}?course={{ selected_course }}{% endif %}" class="ml-auto bg-emerald-100 hover:bg-emerald-200 text-emerald-900 font-bold px-4 py-2 rounded-lg text-sm">匯出成績 CSV</a>
+    </form>
+    <div class="space-y-3">
+      {% for submission in submissions %}
+      <article class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border {% if not submission.graded_at %}border-amber-100 bg-amber-50/50{% else %}border-emerald-100 bg-emerald-50/40{% endif %} p-4">
+        <div class="min-w-0"><p class="text-xs font-bold text-teal-800">{{ submission.assignment.lesson.chapter.course.title }} · {{ submission.assignment.lesson.title }}</p><h3 class="font-bold text-slate-900 mt-1">{{ submission.assignment.title }}</h3><p class="text-sm text-slate-600 mt-1">{{ submission.student.profile.display_name|default:submission.student.username }} ・ 第 {{ submission.attempt_number }} 次 ・ {{ submission.submitted_at|date:"Y/m/d H:i" }}</p></div>
+        <a href="{% url 'manage_lesson_assignments' submission.assignment.lesson_id %}#submission-{{ submission.id }}" class="shrink-0 text-center bg-jp-primary hover:bg-jp-primaryHover text-white font-bold px-4 py-2 rounded-lg text-sm">{% if submission.graded_at %}查看批改{% else %}批改這份 →{% endif %}</a>
+      </article>
+      {% empty %}<div class="rounded-xl bg-emerald-50 p-8 text-center"><div class="text-3xl">✓</div><p class="font-bold text-emerald-900 mt-2">沒有符合篩選條件的繳交紀錄</p><p class="text-sm text-emerald-800 mt-1">可切換課程或批改狀態查看其他紀錄。</p></div>{% endfor %}
+    </div>
+    {% if submission_page.paginator.num_pages > 1 %}<nav class="flex justify-center items-center gap-3 mt-5 text-sm" aria-label="繳交紀錄分頁">{% if submission_page.has_previous %}<a class="rounded-lg bg-slate-100 px-3 py-2 font-bold" href="?course={{ selected_course }}&status={{ status_filter }}&due={{ due_filter }}&sort={{ sort_order }}&q={{ search_query|urlencode }}&sub_page={{ submission_page.previous_page_number }}">上一頁</a>{% endif %}<span class="text-slate-500">第 {{ submission_page.number }} / {{ submission_page.paginator.num_pages }} 頁・共 {{ submission_count }} 筆</span>{% if submission_page.has_next %}<a class="rounded-lg bg-slate-100 px-3 py-2 font-bold" href="?course={{ selected_course }}&status={{ status_filter }}&due={{ due_filter }}&sort={{ sort_order }}&q={{ search_query|urlencode }}&sub_page={{ submission_page.next_page_number }}">下一頁</a>{% endif %}</nav>{% endif %}
+  </section>
+
+  <section class="bg-white rounded-2xl ring-1 ring-slate-100 shadow-sm p-5 sm:p-6">
+    <div class="flex flex-wrap justify-between items-end gap-3 mb-4">
+      <div><h2 class="text-xl font-black text-slate-900">所有作業</h2><p class="text-sm text-slate-500 mt-1">依截止時間排序，可快速找到最近要到期的作業。</p></div>
+      <form method="get" class="flex flex-wrap items-end gap-2">
+        <input type="hidden" name="course" value="{{ selected_course }}"><input type="hidden" name="status" value="{{ status_filter }}"><input type="hidden" name="due" value="{{ due_filter }}"><input type="hidden" name="q" value="{{ search_query }}">
+        <label class="text-sm font-bold text-slate-700">排序<select name="sort" class="ml-2 rounded-lg border-slate-200 px-3 py-2"><option value="due_asc" {% if sort_order == 'due_asc' %}selected{% endif %}>截止時間由近到遠</option><option value="due_desc" {% if sort_order == 'due_desc' %}selected{% endif %}>截止時間由遠到近</option><option value="title" {% if sort_order == 'title' %}selected{% endif %}>依課程排列</option></select></label>
+        <button class="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-3 py-2 rounded-lg text-sm">排序</button>
+      </form>
+    </div>
+    <div class="divide-y divide-slate-100">
+      {% for assignment in assignments %}
+      <article class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-4 first:pt-0 last:pb-0">
+        <div><p class="text-xs font-bold text-teal-800">{{ assignment.lesson.chapter.course.title }} · {{ assignment.lesson.title }}</p><h3 class="font-bold text-slate-900 mt-1">{{ assignment.title }}{% if not assignment.is_published %}<span class="ml-2 text-xs text-slate-400">未開放</span>{% endif %}</h3><p class="text-sm text-slate-500 mt-1">{% if assignment.due_at %}截止 {{ assignment.due_at|date:"Y/m/d H:i" }}{% else %}不限截止時間{% endif %} ・ 已繳 {{ assignment.submission_count }} 份 ・ 待批改 {{ assignment.pending_count }} 份{% if assignment.graded_count %} ・ 平均 {{ assignment.average_score|floatformat:1 }} / {{ assignment.max_score }} 分{% endif %}</p></div>
+        <a href="{% url 'manage_lesson_assignments' assignment.lesson_id %}" class="shrink-0 text-center bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-4 py-2 rounded-lg text-sm">管理作業</a>
+      </article>
+      {% empty %}<p class="text-sm text-slate-500 py-4">尚未建立作業。</p>{% endfor %}
+    </div>
+    {% if assignment_page.paginator.num_pages > 1 %}<nav class="flex justify-center items-center gap-3 mt-5 text-sm" aria-label="作業列表分頁">{% if assignment_page.has_previous %}<a class="rounded-lg bg-slate-100 px-3 py-2 font-bold" href="?course={{ selected_course }}&status={{ status_filter }}&due={{ due_filter }}&sort={{ sort_order }}&q={{ search_query|urlencode }}&assignment_page={{ assignment_page.previous_page_number }}">上一頁</a>{% endif %}<span class="text-slate-500">第 {{ assignment_page.number }} / {{ assignment_page.paginator.num_pages }} 頁・共 {{ assignment_count }} 份</span>{% if assignment_page.has_next %}<a class="rounded-lg bg-slate-100 px-3 py-2 font-bold" href="?course={{ selected_course }}&status={{ status_filter }}&due={{ due_filter }}&sort={{ sort_order }}&q={{ search_query|urlencode }}&assignment_page={{ assignment_page.next_page_number }}">下一頁</a>{% endif %}</nav>{% endif %}
+  </section>
+
+  {% else %}
+  <form method="get" class="flex flex-wrap items-end gap-3 mb-5 rounded-xl bg-white ring-1 ring-slate-100 p-4">
+    <input type="hidden" name="status" value="{{ active_filter }}">
+    <label class="flex-1 min-w-52 text-sm font-bold text-slate-700">搜尋課程或作業<input type="search" name="q" value="{{ search_query }}" placeholder="輸入課程名稱、單元或作業名稱" class="mt-1 block w-full rounded-lg border-slate-200 px-3 py-2"></label>
+    <button class="bg-jp-primary hover:bg-jp-primaryHover text-white font-bold px-4 py-2 rounded-lg text-sm">搜尋</button>
+    {% if search_query %}<a href="?status={{ active_filter }}" class="text-sm font-bold text-slate-500 hover:underline">清除</a>{% endif %}
+    <span class="w-full text-xs text-slate-500">顯示 {{ filtered_assignment_count }} / {{ assignment_count }} 份作業</span>
+  </form>
+  <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+    <a href="?status=all&q={{ search_query|urlencode }}" class="rounded-xl ring-1 p-4 transition {% if active_filter == 'all' %}bg-slate-900 text-white ring-slate-900{% else %}bg-white text-slate-700 ring-slate-200 hover:ring-slate-400{% endif %}"><p class="text-sm opacity-75">全部作業</p><p class="text-2xl font-black mt-1">{{ assignment_count }}</p></a>
+    <a href="?status=todo&q={{ search_query|urlencode }}" class="rounded-xl ring-1 p-4 transition {% if active_filter == 'todo' %}bg-teal-700 text-white ring-teal-700{% else %}bg-white text-slate-700 ring-slate-200 hover:ring-teal-300{% endif %}"><p class="text-sm opacity-75">尚未繳交</p><p class="text-2xl font-black mt-1">{{ counts.todo }}</p></a>
+    <a href="?status=pending&q={{ search_query|urlencode }}" class="rounded-xl ring-1 p-4 transition {% if active_filter == 'pending' %}bg-amber-600 text-white ring-amber-600{% else %}bg-white text-slate-700 ring-slate-200 hover:ring-amber-300{% endif %}"><p class="text-sm opacity-75">等待批改</p><p class="text-2xl font-black mt-1">{{ counts.pending }}</p></a>
+    <a href="?status=graded&q={{ search_query|urlencode }}" class="rounded-xl ring-1 p-4 transition {% if active_filter == 'graded' %}bg-emerald-700 text-white ring-emerald-700{% else %}bg-white text-slate-700 ring-slate-200 hover:ring-emerald-300{% endif %}"><p class="text-sm opacity-75">已批改</p><p class="text-2xl font-black mt-1">{{ counts.graded }}</p></a>
+  </section>
+  {% if counts.overdue %}<a href="?status=overdue&q={{ search_query|urlencode }}" class="inline-flex mb-5 rounded-full bg-rose-50 text-rose-800 ring-1 ring-rose-100 px-4 py-2 text-sm font-bold">已過截止未繳 {{ counts.overdue }} 份（部分作業仍可補交）→</a>{% endif %}
+
+  <section class="space-y-3">
+    {% for row in assignment_rows %}
+    <article class="bg-white rounded-2xl ring-1 ring-slate-100 shadow-sm p-5 sm:p-6">
+      <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+        <div class="min-w-0 flex-1">
+          <p class="text-xs font-bold text-teal-800">{{ row.assignment.lesson.chapter.course.title }} · {{ row.assignment.lesson.title }}</p>
+          <h2 class="text-lg font-black text-slate-900 mt-1">{{ row.assignment.title }}</h2>
+          <p class="text-sm text-slate-500 mt-2">{% if row.assignment.due_at %}截止 {{ row.assignment.due_at|date:"Y/m/d H:i" }}{% else %}不限截止時間{% endif %} ・ 滿分 {{ row.assignment.max_score }} 分 ・ {% if row.latest %}已繳第 {{ row.latest.attempt_number }} / {{ row.assignment.max_attempts }} 次{% else %}可繳交 {{ row.assignment.max_attempts }} 次{% endif %}</p>
+          {% if row.latest and row.latest.graded_at %}<div class="mt-3 rounded-lg bg-emerald-50 p-3"><p class="font-bold text-emerald-900">得分 {{ row.latest.score }} / {{ row.assignment.max_score }}</p>{% if row.latest.feedback %}<p class="text-sm text-emerald-900 mt-1 whitespace-pre-line">{{ row.latest.feedback }}</p>{% endif %}</div>{% elif row.latest %}<p class="mt-3 text-sm text-amber-800">老師已收到你的繳交，批改完成後會在這裡顯示分數與回饋。</p>{% endif %}
+        </div>
+        <div class="sm:text-right shrink-0">
+          {% if row.is_overdue and row.assignment.allow_late_submissions %}<span class="inline-flex rounded-full bg-amber-100 text-amber-900 px-3 py-1 text-xs font-bold">已過截止，仍可補交</span>{% elif row.is_overdue %}<span class="inline-flex rounded-full bg-rose-100 text-rose-800 px-3 py-1 text-xs font-bold">逾期未繳</span>{% elif row.status == 'todo' %}<span class="inline-flex rounded-full bg-teal-100 text-teal-900 px-3 py-1 text-xs font-bold">尚未繳交</span>{% elif row.status == 'pending' %}<span class="inline-flex rounded-full bg-amber-100 text-amber-900 px-3 py-1 text-xs font-bold">等待批改</span>{% else %}<span class="inline-flex rounded-full bg-emerald-100 text-emerald-900 px-3 py-1 text-xs font-bold">已批改</span>{% endif %}
+          <a href="{% url 'watch_lesson' row.assignment.lesson_id %}#assignment-{{ row.assignment.id }}" class="block mt-3 bg-jp-primary hover:bg-jp-primaryHover text-white font-bold px-4 py-2 rounded-lg text-sm">{% if row.status == 'todo' %}前往繳交 →{% elif row.status == 'pending' %}查看繳交 →{% else %}查看作業與回饋 →{% endif %}</a>
+        </div>
+      </div>
+    </article>
+    {% empty %}<div class="bg-white rounded-2xl ring-1 ring-slate-100 p-10 text-center"><div class="text-4xl">🎉</div><h2 class="font-black text-slate-900 mt-3">目前沒有符合條件的作業</h2><p class="text-sm text-slate-500 mt-1">調整搜尋內容或切換分類，再查看其他作業。</p></div>{% endfor %}
+  </section>
+  {% if assignment_page.paginator.num_pages > 1 %}<nav class="flex justify-center items-center gap-3 mt-5 text-sm" aria-label="學生作業分頁">{% if assignment_page.has_previous %}<a class="rounded-lg bg-white px-3 py-2 font-bold ring-1 ring-slate-200" href="?status={{ active_filter }}&q={{ search_query|urlencode }}&page={{ assignment_page.previous_page_number }}">上一頁</a>{% endif %}<span class="text-slate-500">第 {{ assignment_page.number }} / {{ assignment_page.paginator.num_pages }} 頁</span>{% if assignment_page.has_next %}<a class="rounded-lg bg-white px-3 py-2 font-bold ring-1 ring-slate-200" href="?status={{ active_filter }}&q={{ search_query|urlencode }}&page={{ assignment_page.next_page_number }}">下一頁</a>{% endif %}</nav>{% endif %}
+  {% endif %}
+</main>
+{% endblock %}

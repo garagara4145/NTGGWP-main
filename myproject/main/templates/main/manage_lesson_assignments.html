@@ -1,0 +1,125 @@
+{% extends 'main/base_eduflow.html' %}
+{% block title %}作業與批改 - {{ lesson.title }}{% endblock %}
+
+{% block content %}
+<main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 ef-form">
+  <nav class="text-sm text-slate-500 mb-4">
+    <a class="hover:text-jp-primary" href="{% url 'manage_content' course.id %}">課程內容管理</a>
+    <span class="mx-2">/</span><span>{{ lesson.title }}</span><span class="mx-2">/</span><span class="text-slate-800 font-bold">作業與批改</span>
+  </nav>
+
+  <header class="bg-white rounded-2xl ring-1 ring-slate-100 shadow-sm p-6 mb-5">
+    <a href="{% url 'manage_content' course.id %}" class="text-sm font-bold text-jp-primary hover:underline">← 回課程內容</a>
+    <div class="flex flex-wrap justify-between items-end gap-4 mt-3">
+      <div><p class="text-xs font-bold tracking-wide text-teal-700">{{ course.title }}</p><h1 class="text-2xl font-black text-slate-900 mt-1">{{ lesson.title }}｜作業與批改</h1><p class="text-sm text-slate-500 mt-2">建立作業後，學生會在此單元頁面繳交；所有繳交與批改集中在本頁。</p></div>
+      <a href="{% url 'edit_lesson' lesson.id %}" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-lg text-sm">編輯單元</a>
+    </div>
+  </header>
+
+  <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+    <div class="bg-white rounded-xl ring-1 ring-slate-100 p-4"><p class="text-sm text-slate-500">作業</p><p class="text-2xl font-black text-slate-900">{{ assignment_count }} <span class="text-sm font-medium">份</span></p></div>
+    <div class="bg-amber-50 rounded-xl ring-1 ring-amber-100 p-4"><p class="text-sm text-amber-800">待批改</p><p class="text-2xl font-black text-amber-900">{{ pending_count }} <span class="text-sm font-medium">份繳交</span></p></div>
+    <div class="bg-emerald-50 rounded-xl ring-1 ring-emerald-100 p-4"><p class="text-sm text-emerald-800">已批改</p><p class="text-2xl font-black text-emerald-900">{{ graded_count }} <span class="text-sm font-medium">份繳交</span></p></div>
+    <div class="bg-violet-50 rounded-xl ring-1 ring-violet-100 p-4"><p class="text-sm text-violet-800">平均得分</p><p class="text-2xl font-black text-violet-900">{% if average_score != None %}{{ average_score|floatformat:1 }}{% else %}—{% endif %}</p></div>
+  </section>
+
+  <details class="bg-white rounded-2xl ring-1 ring-teal-200 shadow-sm p-6 mb-5" {% if not assignment_rows %}open{% endif %}>
+    <summary class="cursor-pointer list-none flex flex-wrap justify-between items-center gap-3">
+      <span><strong class="text-lg text-slate-900">＋ 新增作業</strong><span class="block text-sm text-slate-500 mt-1">填寫標題、說明和截止時間，建立後學生即可繳交。</span></span>
+      <span class="bg-teal-50 text-teal-800 font-bold px-3 py-1.5 rounded-lg text-sm">展開表單</span>
+    </summary>
+    <form method="post" action="{% url 'add_lesson_assignment' lesson.id %}" class="ef-form border-t border-slate-100 mt-5 pt-4">
+      {% csrf_token %}{{ assignment_form.as_p }}
+      <button type="submit" class="bg-jp-primary hover:bg-jp-primaryHover text-white font-bold px-5 py-2.5 rounded-lg transition mt-2">建立作業</button>
+    </form>
+  </details>
+
+  {% for row in assignment_rows %}
+  <article class="bg-white rounded-2xl ring-1 ring-slate-200 shadow-sm mb-5 overflow-hidden">
+    <header class="p-5 sm:p-6 bg-slate-50 border-b border-slate-100">
+      <div class="flex flex-wrap justify-between items-start gap-3">
+        <div class="min-w-0">
+          <div class="flex flex-wrap items-center gap-2"><h2 class="text-xl font-black text-slate-900">{{ row.assignment.title }}</h2>{% if not row.assignment.is_published %}<span class="rounded-full bg-slate-200 text-slate-600 px-2.5 py-1 text-xs font-bold">未開放</span>{% endif %}</div>
+          <p class="text-sm text-slate-600 whitespace-pre-line mt-2">{{ row.assignment.instructions }}</p>
+          {% if row.assignment.rubric %}<p class="text-sm text-slate-600 whitespace-pre-line mt-2"><strong>評分規準：</strong>{{ row.assignment.rubric }}</p>{% endif %}
+          <p class="text-xs text-slate-500 mt-3">滿分 {{ row.assignment.max_score }} 分 ・ 最多 {{ row.assignment.max_attempts }} 次 ・ {% if row.assignment.due_at %}截止 {{ row.assignment.due_at|date:"Y/m/d H:i" }}{% else %}不限截止時間{% endif %}{% if row.assignment.allow_late_submissions %} ・ 接受逾期繳交{% endif %}</p>
+          {% if row.graded_count %}<p class="text-sm font-bold text-violet-800 mt-2">已批改 {{ row.graded_count }} 份・平均 {{ row.average_score|floatformat:1 }} / {{ row.assignment.max_score }} 分</p>{% endif %}
+        </div>
+        <div class="flex gap-2">
+          {% if row.attachment_count %}<a href="{% url 'download_assignment_attachments' row.assignment.id %}" class="bg-sky-100 hover:bg-sky-200 text-sky-900 font-bold px-3 py-2 rounded-lg text-sm">批次下載附件（{{ row.attachment_count }}）</a>{% endif %}
+          <form method="post" action="{% url 'delete_lesson_assignment' row.assignment.id %}" onsubmit="return confirm('刪除作業也會刪除所有學生繳交紀錄，確定繼續？');">
+            {% csrf_token %}<button type="submit" class="text-red-600 hover:bg-red-50 font-bold px-3 py-2 rounded-lg text-sm">刪除作業</button>
+          </form>
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-2 mt-4">
+        <span class="rounded-full bg-white ring-1 ring-slate-200 text-slate-700 px-3 py-1 text-sm">繳交 {{ row.submission_count }}</span>
+        {% if row.pending_count %}<span class="rounded-full bg-amber-100 text-amber-900 px-3 py-1 text-sm font-bold">待批改 {{ row.pending_count }}</span>{% else %}<span class="rounded-full bg-emerald-100 text-emerald-900 px-3 py-1 text-sm">沒有待批改</span>{% endif %}
+      </div>
+    </header>
+
+    <details class="border-b border-slate-100">
+      <summary class="cursor-pointer px-5 sm:px-6 py-4 text-sm font-bold text-jp-primary">編輯作業設定</summary>
+      <form method="post" action="{% url 'edit_lesson_assignment' row.assignment.id %}" class="ef-form px-5 sm:px-6 pb-5">
+        {% csrf_token %}{{ row.form.as_p }}
+        <button type="submit" class="bg-slate-800 hover:bg-slate-700 text-white font-bold px-4 py-2 rounded-lg text-sm">儲存設定</button>
+      </form>
+    </details>
+
+    <details class="group" {% if row.pending_count %}open{% endif %}>
+      <summary class="cursor-pointer list-none flex flex-wrap justify-between items-center gap-3 px-5 sm:px-6 py-4">
+        <span class="font-black text-slate-900">學生繳交與批改</span><span class="text-sm text-slate-500">{{ row.submission_count }} 份{% if row.pending_count %}・<strong class="text-amber-700">{{ row.pending_count }} 份待批改</strong>{% endif %}　⌄</span>
+      </summary>
+      <div class="px-5 sm:px-6 pb-5 space-y-4">
+        {% for submission in row.submissions %}
+        <article id="submission-{{ submission.id }}" class="scroll-mt-24 rounded-xl border {% if not submission.graded_at %}border-amber-200 bg-amber-50/50{% else %}border-slate-200 bg-white{% endif %} p-4">
+          <div class="flex flex-wrap justify-between items-start gap-2">
+            <div><h3 class="font-bold text-slate-900">{{ submission.student.profile.display_name|default:submission.student.username }}</h3><p class="text-xs text-slate-500 mt-1">第 {{ submission.attempt_number }} 次 ・ {{ submission.submitted_at|date:"Y/m/d H:i" }}</p></div>
+            {% if submission.graded_at %}<span class="rounded-full bg-emerald-100 text-emerald-900 px-3 py-1 text-xs font-bold">已批改：{{ submission.score }}/{{ row.assignment.max_score }}</span>{% else %}<span class="rounded-full bg-amber-100 text-amber-900 px-3 py-1 text-xs font-bold">待批改</span>{% endif %}
+          </div>
+          {% if submission.response_text %}<div class="mt-4 rounded-lg bg-white border border-slate-100 p-3 text-sm text-slate-700 whitespace-pre-line"><strong class="block text-xs text-slate-500 mb-1">學生作答</strong>{{ submission.response_text }}</div>{% endif %}
+          {% if submission.attachment %}<a href="{% url 'download_assignment_submission' submission.id %}" class="mt-3 inline-flex items-center text-sm font-bold text-jp-primary hover:underline">📎 下載學生附件</a>{% endif %}
+          <form method="post" action="{% url 'grade_lesson_assignment' submission.id %}" class="mt-4 border-t border-slate-200 pt-4 space-y-3" data-grade-form>
+            {% csrf_token %}
+            {% if submission.criteria_score_rows %}
+            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {% for criterion in submission.criteria_score_rows %}
+              <label class="text-sm font-medium text-slate-700">{{ criterion.name }}（滿分 {{ criterion.max_points }}）<input type="number" name="criterion_{{ forloop.counter0 }}" min="0" max="{{ criterion.max_points }}" step="0.01" value="{{ criterion.score }}" required class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" data-criterion-score></label>
+              {% endfor %}
+            </div>
+            <p class="text-sm font-bold text-slate-700">項目得分合計：<output data-score-total>{{ submission.score|default_if_none:0 }}</output> / {{ row.assignment.max_score }}</p>
+            {% else %}
+            <label class="block max-w-48 text-sm font-medium text-slate-700">總分（滿分 {{ row.assignment.max_score }}）<input type="number" name="score" min="0" max="{{ row.assignment.max_score }}" step="0.01" value="{{ submission.score|default_if_none:'' }}" required class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+            {% endif %}
+            <div class="grid md:grid-cols-[1fr_auto] gap-3 items-end">
+              <label class="text-sm font-medium text-slate-700">給學生的回饋<textarea name="feedback" rows="2" placeholder="寫下具體建議或鼓勵" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2">{{ submission.feedback }}</textarea></label>
+              <button type="submit" class="bg-jp-primary hover:bg-jp-primaryHover text-white font-bold px-4 py-2.5 rounded-lg text-sm">{% if submission.graded_at %}更新批改{% else %}送出批改{% endif %}</button>
+            </div>
+          </form>
+        </article>
+        {% empty %}<div class="rounded-xl bg-slate-50 p-8 text-center"><p class="font-bold text-slate-700">還沒有學生繳交</p><p class="text-sm text-slate-500 mt-1">學生繳交後，內容會出現在這裡。</p></div>{% endfor %}
+      </div>
+    </details>
+  </article>
+  {% empty %}
+  <section class="bg-white rounded-2xl ring-1 ring-slate-100 p-8 text-center"><div class="text-4xl mb-3">📝</div><h2 class="text-lg font-black text-slate-900">這個單元還沒有作業</h2><p class="text-sm text-slate-500 mt-2">按上方「新增作業」，即可開始設定學生繳交內容與期限。</p></section>
+  {% endfor %}
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('[data-grade-form]').forEach(function (form) {
+  var inputs = form.querySelectorAll('[data-criterion-score]');
+  var total = form.querySelector('[data-score-total]');
+  if (!inputs.length || !total) return;
+  function updateTotal() {
+    var sum = 0;
+    inputs.forEach(function (input) { sum += Number(input.value || 0); });
+    total.textContent = sum.toFixed(2).replace(/\.00$/, '');
+  }
+  inputs.forEach(function (input) { input.addEventListener('input', updateTotal); });
+  updateTotal();
+});
+</script>
+{% endblock %}

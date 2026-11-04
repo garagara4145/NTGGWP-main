@@ -3,7 +3,7 @@
 
 {% block content %}
 <style>
-  /* ===== 玻璃質感（僅作用於註冊頁，與登入頁同款）===== */
+
   .glass-login {
     --g-text: #e8ecf8;
     --g-muted: #aab2c7;
@@ -13,11 +13,10 @@
     place-items: center;
     padding: 2.5rem 1rem;
     color: var(--g-text);
+
     background:
-      radial-gradient(circle at 15% 12%, hsl(172 75% 48% / 0.24), transparent 45%),
-      radial-gradient(circle at 85% 85%, hsl(205 75% 48% / 0.22), transparent 42%),
-      radial-gradient(hsl(0 0% 100% / 0.05) 1px, transparent 1.4px) 0 0 / 24px 24px,
-      linear-gradient(135deg, #0b1220 0%, #0a0e14 55%, #0d1512 100%);
+      linear-gradient(180deg, hsl(180 25% 5% / 0.62), hsl(200 30% 4% / 0.78)),
+      url('/media/site/auth-bg.jpg') center 65% / cover no-repeat;
   }
   .glass-card {
     width: min(27rem, 100%);
@@ -31,7 +30,7 @@
   }
   .glass-card h1 { color: #fff; }
   .glass-card .g-sub, .glass-card .g-muted { color: var(--g-muted); }
-  /* Django form.as_p 的欄位也套深色 */
+
   .glass-card .ef-form label { color: var(--g-muted); font-weight: 600; }
   .glass-card .ef-form p { margin: 0 0 .9rem; }
   .glass-card .ef-form input:not([type=checkbox]):not([type=radio]):not([type=file]),
@@ -69,7 +68,7 @@
   .glass-oauth:hover { background: hsl(0 0% 100% / 0.1); }
   .glass-link { color: hsl(172 70% 62%); }
   .glass-link:hover { text-decoration: underline; }
-  /* 分隔線：刻度線，與登入頁同款 */
+
   .glass-sep {
     height: 7px;
     background-image: linear-gradient(90deg, hsl(0 0% 100% / .3) 1px, transparent 1px);
@@ -100,6 +99,7 @@
     </div>
     <div class="space-y-3">
       <a href="{% url 'google_login' %}" class="glass-oauth"><span>使用 Google 繼續</span></a>
+      <a href="{% url 'microsoft_login' %}" class="glass-oauth"><span>使用 Microsoft 繼續</span></a>
     </div>
     <p class="text-xs g-muted mt-2 text-center">透過快速登入（Google）建立的帳號預設為學生身分。</p>
 

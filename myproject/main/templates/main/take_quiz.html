@@ -1,0 +1,102 @@
+{% extends 'main/base_eduflow.html' %}
+{% block title %}{{ quiz.title }} | EduFlow{% endblock %}
+{% block extra_head %}{% include 'main/partials/lm_quiz_style.html' %}{% endblock %}
+
+{% block content %}
+<main class="lm">
+  <div class="lm-wrap">
+    <aside class="lm-side">
+      <a href="{% url 'watch_course' course.id %}" class="lm-back">← 返回課程</a>
+      <p class="lm-eyebrow">Quiz path</p>
+      <ol class="lm-path">
+        {% for q in questions %}
+        <li><a href="#q-{{ q.id }}" data-path="{{ q.id }}"><span class="lm-dot"></span>第 {{ forloop.counter }} 題</a></li>
+        {% endfor %}
+      </ol>
+      <div class="lm-progress">
+        <div class="lm-progress-row"><span>作答進度</span><span data-count>0 / {{ questions|length }}</span></div>
+        <div class="lm-bar"><i data-bar></i></div>
+        <p style="margin:0">全部作答後即可送出。<br>送出後才會顯示對錯與解析。</p>
+      </div>
+    </aside>
+
+    <section>
+      <p class="lm-kicker">{{ course.title }} · 第 {{ chapter.sort_order }} 章</p>
+      <h1>{{ quiz.title }}</h1>
+      <p class="lm-lead">共 {{ questions|length }} 題 · 及格 {{ quiz.pass_score }} 分{% if last_attempt %} · 上次成績 {{ last_attempt.score }} 分{% endif %}</p>
+      <div class="lm-note is-hint" style="margin:0 0 8px">先想清楚再作答。送出後，系統會依錯題標記你的弱點，並可產生 AI 補救練習。</div>
+
+      <form method="post" action="{% url 'submit_quiz' quiz.id %}" data-quiz-form>
+        {% csrf_token %}
+        {% for q in questions %}
+        <article class="lm-q" id="q-{{ q.id }}" data-q="{{ q.id }}">
+          <p class="lm-kicker"><b>{{ forloop.counter|stringformat:"02d" }}</b> / 單選題{% if q.topic_tag %} · {{ q.topic_tag }}{% endif %}</p>
+          <p class="lm-q-text">{{ q.question_text }}</p>
+          <div class="lm-opts" role="radiogroup" aria-label="第 {{ forloop.counter }} 題選項">
+            {% for opt in q.options %}
+            <label class="lm-opt">
+              <input type="radio" name="q_{{ q.id }}" value="{{ forloop.counter0 }}" required>
+              <span class="lm-radio" aria-hidden="true"></span>
+              <span>{{ opt }}</span>
+            </label>
+            {% endfor %}
+          </div>
+          <p class="lm-done" data-done hidden>✓ 已作答</p>
+        </article>
+        {% endfor %}
+
+        <div class="lm-submit">
+          <button type="submit" class="lm-btn lm-btn-yellow" data-submit>送出測驗</button>
+          <span data-remaining>還有 {{ questions|length }} 題未作答</span>
+        </div>
+      </form>
+    </section>
+  </div>
+</main>
+
+<script>
+(function () {
+  const form = document.querySelector('[data-quiz-form]');
+  if (!form) return;
+  const items = Array.from(form.querySelectorAll('[data-q]'));
+  const total = items.length;
+  const countEl = document.querySelector('[data-count]');
+  const barEl = document.querySelector('[data-bar]');
+  const remainEl = form.querySelector('[data-remaining]');
+  const submitBtn = form.querySelector('[data-submit]');
+  form.noValidate = true;  // 由下方的檢查接手，未作答時捲到該題
+
+  function isAnswered(item) { return !!item.querySelector('input:checked'); }
+
+  function refresh() {
+    let done = 0;
+    items.forEach(item => {
+      const answered = isAnswered(item);
+      if (answered) done++;
+      item.querySelector('[data-done]').hidden = !answered;
+      const link = document.querySelector('[data-path="' + item.dataset.q + '"]');
+      if (link) link.classList.toggle('is-done', answered);
+    });
+    countEl.textContent = done + ' / ' + total;
+    barEl.style.width = (total ? done / total * 100 : 0) + '%';
+    remainEl.textContent = done === total ? '全部完成，可以送出了' : '還有 ' + (total - done) + ' 題未作答';
+  }
+
+  form.addEventListener('change', refresh);
+  form.addEventListener('submit', (e) => {
+    const missing = items.find(item => !isAnswered(item));
+    if (missing) {
+      e.preventDefault();
+      missing.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const first = missing.querySelector('input');
+      if (first) first.focus({ preventScroll: true });
+      remainEl.textContent = '第 ' + (items.indexOf(missing) + 1) + ' 題還沒作答';
+      return;
+    }
+    submitBtn.disabled = true;
+    submitBtn.textContent = '送出中…';
+  });
+  refresh();
+})();
+</script>
+{% endblock %}

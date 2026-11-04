@@ -16,7 +16,7 @@
             {% if course.student_count %}
             <span class="absolute bottom-3 right-3 bg-black/70 text-white text-xs px-2 py-1 rounded flex items-center gap-1"><i class="fas fa-users text-[10px]"></i> {{ course.student_count }} 人在學</span>
             {% endif %}
-            <!-- hover 時顯示課程簡介 -->
+
             <div class="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
                 <p class="text-white/90 text-xs leading-relaxed line-clamp-2">{{ course.description|truncatechars:80 }}</p>
             </div>
@@ -32,14 +32,6 @@
                 <span class="text-satdark-muted">({{ course.review_count }})</span>
                 {% else %}
                 <span class="text-satdark-muted">尚無評分</span>
-                {% endif %}
-            </div>
-            <div class="flex items-baseline gap-2">
-                {% if course.has_discount %}
-                <span class="font-grotesk tabular-nums text-sm text-satdark-muted line-through decoration-2">NT$ {{ course.price }}</span>
-                <span class="font-grotesk tabular-nums text-lg font-bold text-electric">NT$ {{ course.get_effective_price }}</span>
-                {% else %}
-                <span class="font-grotesk tabular-nums text-lg font-bold text-electric">NT$ {{ course.price }}</span>
                 {% endif %}
             </div>
         </div>

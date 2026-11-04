@@ -1,0 +1,50 @@
+{% extends 'main/base_eduflow.html' %}
+{% block title %}字幕與逐字稿搜尋｜EduFlow{% endblock %}
+
+{% block content %}
+<main class="max-w-4xl mx-auto px-4 sm:px-6 py-10">
+  <header class="mb-7">
+    <p class="text-sm font-bold uppercase tracking-wider text-jp-primary mb-2">課程複習</p>
+    <h1 class="text-3xl font-black text-slate-900">字幕與逐字稿搜尋</h1>
+    <p class="text-slate-500 mt-2">搜尋你已選課、自己開設，或可免費試看的課程字幕；點時間即可從影片對應位置開始播放。</p>
+  </header>
+
+  <form method="get" action="{% url 'transcript_search' %}" class="bg-white rounded-2xl ring-1 ring-slate-100 shadow-sm p-4 flex gap-3">
+    <input type="search" name="q" value="{{ query }}" maxlength="100" placeholder="輸入關鍵字，例如：迴圈、資料庫、學習方法" class="flex-1 min-w-0 rounded-xl border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-200" aria-label="搜尋字幕與逐字稿">
+    <button type="submit" class="shrink-0 rounded-xl bg-jp-primary px-5 py-3 font-bold text-white hover:bg-jp-primaryHover">搜尋</button>
+  </form>
+
+  {% if search_performed %}
+    {% if page_obj and page_obj.object_list %}
+    <p class="text-sm text-slate-500 mt-6 mb-3">找到 {{ page_obj.paginator.count }} 筆片段</p>
+    <div class="space-y-3">
+      {% for cue in page_obj %}
+      <article class="bg-white rounded-2xl ring-1 ring-slate-100 shadow-sm p-5">
+        <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm mb-2">
+          <span class="font-bold text-slate-800">{{ cue.subtitle.lesson.chapter.course.title }}</span>
+          <span class="text-slate-400">/</span>
+          <span class="text-slate-600">{{ cue.subtitle.lesson.title }}</span>
+          <span class="ml-auto text-xs text-slate-400">{{ cue.subtitle.get_language_code_display }}</span>
+        </div>
+        <p class="text-slate-700 leading-relaxed">{{ cue.text }}</p>
+        <a href="{% url 'watch_lesson' cue.subtitle.lesson.id %}?t={{ cue.start_seconds }}" class="inline-flex items-center gap-2 mt-3 text-sm font-bold text-jp-primary hover:underline">
+          <i class="fas fa-play-circle"></i> 從 {{ cue.timecode }} 開始播放
+        </a>
+      </article>
+      {% endfor %}
+    </div>
+    {% if page_obj.has_other_pages %}
+    <nav class="flex justify-center items-center gap-4 mt-7" aria-label="搜尋結果分頁">
+      {% if page_obj.has_previous %}<a class="text-jp-primary font-bold hover:underline" href="?q={{ query|urlencode }}&page={{ page_obj.previous_page_number }}">上一頁</a>{% endif %}
+      <span class="text-sm text-slate-500">第 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 頁</span>
+      {% if page_obj.has_next %}<a class="text-jp-primary font-bold hover:underline" href="?q={{ query|urlencode }}&page={{ page_obj.next_page_number }}">下一頁</a>{% endif %}
+    </nav>
+    {% endif %}
+    {% else %}
+    <div class="mt-6 rounded-2xl bg-white ring-1 ring-slate-100 p-8 text-center text-slate-500">目前沒有找到符合「{{ query }}」的字幕片段。</div>
+    {% endif %}
+  {% else %}
+    <div class="mt-6 rounded-2xl bg-white ring-1 ring-slate-100 p-8 text-center text-slate-500">輸入一個關鍵字，就能搜尋課程影片中的字幕與逐字稿。</div>
+  {% endif %}
+</main>
+{% endblock %}

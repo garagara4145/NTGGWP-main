@@ -1,0 +1,121 @@
+<style>
+  /* LearnMate 測驗／補救練習樣式：紙張底色、深藍文字、單選列與即時回饋框。全部以 .lm 為範圍，不影響其他頁面。 */
+  .lm {
+    --paper: #f8f6ef; --white: #fffefa; --ink: #182b42; --muted: #697780; --blue: #2e6286;
+    --yellow: #efc956; --yellow-soft: #fcf0c8; --line: #dfe2d8;
+    --green: #2d7057; --green-soft: #eaf3e9; --red: #aa4839; --red-soft: #fff0eb;
+    --sel: #eef3f1; --sel-line: #5f89a1;
+    --mono: "IBM Plex Mono", ui-monospace, "Cascadia Code", Consolas, "Microsoft JhengHei", monospace;
+    background: var(--paper); color: var(--ink);
+    font-family: Inter, "Segoe UI", "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+    font-size: 15px; line-height: 1.7; min-height: 70vh;
+  }
+  .lm *, .lm *::before, .lm *::after { box-sizing: border-box; }
+  .lm a { color: inherit; }
+  .lm-wrap { max-width: 1100px; margin: 0 auto; padding: 40px 24px 96px; display: grid; gap: 56px; grid-template-columns: 1fr; }
+  @media (min-width: 1024px) { .lm-wrap { grid-template-columns: 220px minmax(0, 1fr); } }
+  @media (max-width: 1023px) { .lm-wrap { gap: 24px; padding-top: 28px; } .lm-side .lm-eyebrow { display: none; } }
+
+  /* 左側進度欄 */
+  .lm-side { align-self: start; }
+  @media (min-width: 1024px) { .lm-side { position: sticky; top: 96px; } }
+  .lm-back { display: inline-block; font-size: 13px; color: var(--muted); text-decoration: none; margin-bottom: 22px; }
+  .lm-back:hover { color: var(--ink); }
+  .lm-eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0 0 12px; }
+  .lm-path { list-style: none; margin: 0 0 24px; padding: 0; display: none; }
+  @media (min-width: 1024px) { .lm-path { display: block; } }
+  .lm-path a { display: flex; align-items: center; gap: 10px; padding: 5px 0; font-size: 13px; color: var(--muted); text-decoration: none; }
+  .lm-path a:hover { color: var(--ink); }
+  .lm-dot { width: 18px; height: 18px; flex: none; border-radius: 50%; border: 1px solid var(--line); background: var(--white);
+            display: inline-flex; align-items: center; justify-content: center; font-size: 10px; color: var(--green); }
+  .lm-path .is-done { color: var(--ink); }
+  .lm-path .is-done .lm-dot { background: var(--green-soft); border-color: #b9d3bf; }
+  .lm-path .is-done .lm-dot::after { content: "✓"; }
+  .lm-path .is-wrong .lm-dot { background: var(--red-soft); border-color: #e6bcb2; color: var(--red); }
+  .lm-path .is-wrong .lm-dot::after { content: "✕"; }
+  .lm-progress { border-top: 1px solid var(--line); padding-top: 14px; font-size: 12px; color: var(--muted); }
+  .lm-progress-row { display: flex; justify-content: space-between; color: var(--ink); font-weight: 600; margin-bottom: 8px; }
+  .lm-bar { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; margin-bottom: 10px; }
+  .lm-bar > i { display: block; height: 100%; width: 0; background: var(--green); transition: width .25s ease; }
+
+  /* 主欄 */
+  .lm-kicker { font-family: var(--mono); font-size: 12px; color: var(--muted); margin: 0 0 10px; display: flex; align-items: center; gap: 10px; }
+  .lm-kicker::before { content: ""; width: 14px; height: 1px; background: var(--muted); }
+  .lm-kicker b { color: var(--ink); font-weight: 600; }
+  .lm h1 { font-size: 30px; line-height: 1.3; font-weight: 750; margin: 0 0 8px; color: var(--ink); }
+  .lm h2 { font-size: 21px; line-height: 1.4; font-weight: 720; margin: 0 0 6px; color: var(--ink); }
+  .lm-lead { color: var(--muted); margin: 0 0 22px; }
+  .lm-section { padding: 30px 0; border-top: 1px solid var(--line); }
+  .lm-section:first-of-type { border-top: 0; padding-top: 0; }
+
+  .lm-q { padding: 26px 0; border-top: 1px dashed var(--line); scroll-margin-top: 96px; }
+  .lm-q:first-child { border-top: 0; }
+  .lm-q-text { font-size: 16px; font-weight: 650; margin: 0 0 14px; white-space: pre-line; }
+  .lm-opts { display: grid; gap: 8px; max-width: 680px; }
+  .lm-opt { display: flex; align-items: flex-start; gap: 12px; padding: 11px 14px; background: var(--white); border: 1px solid var(--line);
+            border-radius: 6px; cursor: pointer; transition: border-color .15s, background .15s; }
+  .lm-opt:hover { border-color: var(--sel-line); }
+  .lm-opt input { position: absolute; opacity: 0; pointer-events: none; }
+  .lm-radio { width: 15px; height: 15px; flex: none; margin-top: 4px; border-radius: 50%; border: 1px solid #9aa6ad; background: #fff; position: relative; }
+  .lm-opt:has(input:checked) { background: var(--sel); border-color: var(--sel-line); }
+  .lm-opt:has(input:checked) .lm-radio { border-color: var(--blue); }
+  .lm-opt:has(input:checked) .lm-radio::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--blue); }
+  .lm-opt:has(input:focus-visible) { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .lm .lm-opt.is-correct { background: var(--green-soft); border-color: var(--green); }
+  .lm .lm-opt.is-correct .lm-radio { border-color: var(--green); }
+  .lm .lm-opt.is-correct .lm-radio::after { content: "✓"; inset: auto; position: absolute; left: 2px; top: -4px; background: none; color: var(--green); font-size: 12px; font-weight: 700; }
+  .lm .lm-opt.is-wrong .lm-radio { border-color: var(--red); }
+  .lm .lm-opt.is-wrong { background: var(--red-soft); border-color: var(--red); }
+  .lm-opt { position: relative; }
+  .lm-opt.is-locked { cursor: default; }
+  .lm-opt.is-locked:not(.is-correct):not(.is-wrong):hover { border-color: var(--line); }
+  .lm-opt-tag { margin-left: auto; font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+  .lm-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-top: 16px; max-width: 680px; }
+  .lm-btn { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--ink); background: var(--ink); color: #fff !important;
+            font: 650 13px/1 Inter, "Segoe UI", "Noto Sans TC", sans-serif; padding: 11px 18px; border-radius: 5px; cursor: pointer; text-decoration: none; }
+  .lm-btn:hover { background: #22405f; }
+  .lm-btn:disabled { opacity: .55; cursor: wait; }
+  .lm-btn-yellow { background: var(--yellow); border-color: var(--yellow); color: var(--ink) !important; }
+  .lm-btn-yellow:hover { background: #e5bc3f; }
+  .lm-btn-ghost { background: transparent; color: var(--ink) !important; border-color: var(--line); }
+  .lm-btn-ghost:hover { background: var(--white); }
+  .lm-link { background: none; border: 0; padding: 4px 0; font-size: 13px; color: var(--muted); cursor: pointer; }
+  .lm-link:hover { color: var(--ink); text-decoration: underline; }
+  .lm-link-right { margin-left: auto; }
+
+  .lm-note { margin-top: 14px; max-width: 680px; padding: 11px 14px; border-left: 3px solid var(--sel-line); background: #eef1ec; font-size: 14px; white-space: pre-line; }
+  .lm-note b { font-weight: 700; }
+  .lm-note.is-success { border-color: var(--green); background: var(--green-soft); }
+  .lm-note.is-error { border-color: var(--red); background: var(--red-soft); }
+  .lm-note.is-hint { border-color: var(--yellow); background: var(--yellow-soft); }
+  .lm-done { margin: 12px 0 0; font-size: 12px; color: var(--green); }
+  .lm-chip { display: inline-block; font-family: var(--mono); font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 1px 7px; background: var(--white); }
+  .lm-chip.is-warn { color: #7a5a0c; border-color: #ecd690; background: var(--yellow-soft); }
+  .lm-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+  .lm-card { background: var(--white); border: 1px solid var(--line); border-radius: 8px; padding: 18px 20px; max-width: 760px; }
+  .lm-panel { margin-top: 22px; max-width: 760px; padding: 22px 24px; border: 1px solid #c9dccb; background: var(--green-soft); border-radius: 8px; }
+  .lm-panel h3 { margin: 0 0 6px; font-size: 19px; font-weight: 720; color: var(--green); }
+  .lm-panel p { margin: 0 0 14px; color: var(--ink); }
+
+  .lm-score { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 18px; }
+  .lm-score-num { font-size: 56px; font-weight: 780; line-height: 1; font-variant-numeric: tabular-nums; }
+  .lm-score-num.is-pass { color: var(--green); }
+  .lm-score-num.is-fail { color: var(--red); }
+  .lm-delta { display: inline-flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); margin-top: 14px; padding: 7px 12px; border: 1px solid var(--line); border-radius: 5px; background: var(--white); }
+  .lm-delta b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .lm-delta .up { color: var(--green); font-weight: 700; }
+  .lm-delta .down { color: var(--red); font-weight: 700; }
+
+  .lm-submit { position: sticky; bottom: 0; z-index: 5; margin-top: 10px; padding: 14px 0; background: var(--paper); border-top: 1px solid var(--line);
+               display: flex; align-items: center; gap: 16px; }
+  .lm-submit span { font-size: 13px; color: var(--muted); }
+  .lm-loading { display: inline-block; width: 12px; height: 12px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: lm-spin .8s linear infinite; }
+  @keyframes lm-spin { to { transform: rotate(360deg); } }
+  .lm-diagnosis ul { list-style: disc; padding-left: 1.25rem; margin: .4rem 0; }
+  .lm-diagnosis ol { list-style: decimal; padding-left: 1.4rem; margin: .4rem 0; }
+  .lm-diagnosis p { margin: .35rem 0; }
+  .lm-diagnosis strong { font-weight: 700; }
+  [hidden] { display: none !important; }
+</style>

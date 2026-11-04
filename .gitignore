@@ -15,6 +15,9 @@ db.sqlite3-journal
 # 環境變數（資料庫密碼等機密）
 .env
 
+# 本機資料庫備份（可能包含帳號與學習資料，禁止進版控）
+local_backups/
+
 # 編輯器 / 系統
 .vscode/
 .idea/
@@ -36,3 +39,21 @@ myproject/media/lesson_materials/
 # EB CLI 部署暫存(每次 eb deploy 產生,不進 git)
 .elasticbeanstalk/app_versions/
 .elasticbeanstalk/logs/
+.claude/
+
+# 整併期間的參考副本與 GPT 產出，不進版控（本機保留供遷移用）
+incoming_latest/
+outputs/
+*.tar.gz
+
+# 機密與資料庫備份（資安修正）：任何 .env 變體與 SQL 匯出都不進版控
+.env*
+!.env.example
+*.sql
+*.sql.gz
+
+# 本機暫存與交接檔（不進版控）
+handoff/
+tmp/
+output/
+Claude outputs/

@@ -1,6 +1,6 @@
 {% extends 'main/base_eduflow.html' %}
 {% block title %}學生學習分析 | EduFlow{% endblock %}
-{% block extra_head %}<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>{% endblock %}
+{% block extra_head %}<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>{% endblock %}
 
 {% block content %}
 <main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -43,8 +43,19 @@
   const courseLabels = JSON.parse(document.getElementById("sa-course-labels").textContent);
   const courseMinutes = JSON.parse(document.getElementById("sa-course-minutes").textContent);
   const palette = ["#4f46e5","#7c3aed","#ec4899","#f59e0b","#10b981","#3b82f6"];
-  const opts = { responsive: true, maintainAspectRatio: false };
-  new Chart(document.getElementById("barChart"), { type: "bar", data: { labels: courseLabels, datasets: [{ label: "觀看分鐘數", data: courseMinutes, backgroundColor: "#7c3aed", borderRadius: 6 }] }, options: opts });
-  new Chart(document.getElementById("pieChart"), { type: "doughnut", data: { labels: courseLabels, datasets: [{ data: courseMinutes, backgroundColor: palette }] }, options: opts });
+  // 每張圖各自拿一份新的 options：Chart.js 會把座標軸設定寫回傳入的物件，
+  // 共用同一份會讓圓餅圖長出座標軸、橫條圖變回直條圖。
+  const opts = () => ({ responsive: true, maintainAspectRatio: false });
+  // 沒有資料時顯示提示文字，不畫空白圖表
+  function mk(el, cfg) {
+    const vals = (cfg.data.datasets[0] || {}).data || [];
+    if (!vals.length || vals.every(v => !Number(v))) {
+      el.parentElement.innerHTML = '<p style="color:#aab2c7;font-size:14px;text-align:center;padding:48px 0">目前沒有資料可顯示</p>';
+      return null;
+    }
+    return new Chart(el, cfg);
+  }
+  mk(document.getElementById("barChart"), { type: "bar", data: { labels: courseLabels, datasets: [{ label: "觀看分鐘數", data: courseMinutes, backgroundColor: "#7c3aed", borderRadius: 6 }] }, options: opts() });
+  mk(document.getElementById("pieChart"), { type: "doughnut", data: { labels: courseLabels, datasets: [{ data: courseMinutes, backgroundColor: palette }] }, options: opts() });
 </script>
 {% endblock %}

@@ -2,7 +2,7 @@
 {% block title %}編輯單元 | EduFlow{% endblock %}
 
 {% block content %}
-<main class="max-w-lg mx-auto px-4 py-12">
+<main class="max-w-5xl mx-auto px-4 py-12">
   <div class="bg-white rounded-2xl ring-1 ring-slate-100 shadow-sm p-8 ef-form">
     <h1 class="text-2xl font-black text-slate-900 mb-2">編輯單元</h1>
     {% if lesson.video_file %}<p class="text-green-600 font-bold mb-3">🎬 目前已上傳：{{ lesson.video_file.name }}</p>{% endif %}
@@ -16,7 +16,7 @@
     </form>
   </div>
 
-  <!-- 課程教材（簡報 / 練習範例 / 延伸閱讀） -->
+
   <div id="materials" class="bg-white rounded-2xl ring-1 ring-slate-100 shadow-sm p-8 mt-6 scroll-mt-24">
     <h2 class="text-xl font-black text-slate-900 mb-1">課程教材</h2>
     <p class="text-sm text-slate-500 mb-4">學員在觀看此單元時可下載這些檔案（簡報、練習檔、延伸資料）。</p>
@@ -45,5 +45,32 @@
       <button type="submit" class="bg-jp-primary hover:bg-jp-primaryHover text-white font-bold px-5 py-2.5 rounded-lg transition mt-2">＋ 新增教材</button>
     </form>
   </div>
+
+  <div id="subtitles" class="bg-white rounded-2xl ring-1 ring-slate-100 shadow-sm p-8 mt-6 scroll-mt-24">
+    <h2 class="text-xl font-black text-slate-900 mb-1">影片字幕與逐字稿</h2>
+    <p class="text-sm text-slate-500 mb-4">上傳 .srt 或 .vtt 後，學員可在播放器開啟字幕，也能搜尋已選課程的逐字稿並跳到影片時間點。</p>
+    {% if subtitles %}
+    <ul class="divide-y divide-slate-100 mb-5">
+      {% for subtitle in subtitles %}
+      <li class="flex items-center justify-between py-3 gap-3">
+        <span class="text-slate-800"><i class="fas fa-closed-captioning text-jp-primary mr-2"></i>{{ subtitle.get_language_code_display }} <span class="text-xs text-slate-400">{{ subtitle.file.name }}</span></span>
+        <form method="post" action="{% url 'delete_lesson_subtitle' subtitle.id %}" onsubmit="return confirm('確定刪除這份字幕與逐字稿？');">
+          {% csrf_token %}<button class="text-red-500 hover:text-red-700 text-sm font-medium">刪除</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="text-sm text-slate-400 mb-5">尚未上傳字幕。</p>{% endif %}
+    <form method="post" action="{% url 'upload_lesson_subtitle' lesson.id %}" enctype="multipart/form-data" class="ef-form border-t border-slate-100 pt-4">
+      {% csrf_token %}{{ subtitle_form.as_p }}
+      <button type="submit" class="bg-jp-primary hover:bg-jp-primaryHover text-white font-bold px-5 py-2.5 rounded-lg transition mt-2">上傳／取代字幕</button>
+    </form>
+  </div>
+
+  <section class="bg-teal-50 border border-teal-100 rounded-2xl p-6 mt-6">
+    <h2 class="text-lg font-black text-slate-900">作業與批改</h2>
+    <p class="text-sm text-slate-600 mt-1 mb-4">建立作業、查看學生繳交內容，並集中完成評分與回饋。</p>
+    <a href="{% url 'manage_lesson_assignments' lesson.id %}" class="inline-flex items-center bg-jp-primary hover:bg-jp-primaryHover text-white font-bold px-5 py-2.5 rounded-lg transition">前往作業管理 →</a>
+  </section>
 </main>
 {% endblock %}

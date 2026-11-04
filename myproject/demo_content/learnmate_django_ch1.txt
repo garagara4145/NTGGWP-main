@@ -1,0 +1,86 @@
+LearnMate AI 課程教材
+課程：Python Django 線上課程平台實作
+第一章：課程導入與 Django 基礎
+
+一、Django 是什麼
+
+Django 是以 Python 開發的 Web Framework，提供網址路由、View、Template、ORM、表單、登入驗證與後台管理等常用功能。使用 Framework 的目的，是讓開發者把時間集中在系統需求與商業邏輯，而不必從零實作每一個網站基礎元件。
+
+二、專案中的常見檔案
+
+manage.py
+這是 Django 專案管理指令的入口。常用指令包括：
+
+- python manage.py runserver：啟動本機開發伺服器。
+- python manage.py makemigrations：根據 Model 變更建立 migration 檔案。
+- python manage.py migrate：把尚未套用的 migration 套用到資料庫。
+- python manage.py createsuperuser：建立後台管理員帳號。
+- python manage.py test：執行自動化測試。
+
+settings.py
+放置專案設定，例如已安裝的 App、資料庫連線、時區、靜態檔案與媒體檔案設定。密碼與 API Key 不應直接寫進 settings.py，應透過環境變數或 .env 載入。
+
+urls.py
+URLconf 負責把網址路徑對應到處理請求的 View。例如 /courses/ 可以交給 course_list View，/course/1/ 可以交給 course_detail View。
+
+views.py
+View 接收 HTTP request，執行查詢與商業邏輯，最後回傳 HTML、JSON、重新導向或其他 HTTP response。
+
+models.py
+Model 使用 Python 類別描述資料表欄位與資料關聯。Django ORM 讓程式透過 Python 查詢資料，不需要為每一個操作手寫 SQL。
+
+templates
+Template 負責網頁呈現，可以顯示 View 傳入的資料，並使用條件、迴圈與 template tag 組成 HTML。
+
+三、Django 的 MVT 架構
+
+Django 常以 MVT 說明架構：
+
+- Model：資料結構、資料關聯與資料庫操作。
+- View：接收請求、執行邏輯並準備回應。
+- Template：呈現使用者看到的 HTML。
+
+一個常見流程如下：使用者開啟網址，urls.py 找到對應的 View，View 使用 Model 查詢資料，再把資料交給 Template 產生 HTML 回傳給瀏覽器。
+
+四、Model 與 ORM
+
+Model 的每一個欄位通常對應資料表欄位，例如 CharField 適合短文字、TextField 適合長文字、IntegerField 適合整數，而 ForeignKey 可建立多對一關聯。
+
+假設 Course 是課程 Model，可以使用 Course.objects.all() 取得全部課程，也可以用 Course.objects.filter(is_published=True) 找出已公開課程。ORM 會把這些 Python 查詢轉換成資料庫可執行的 SQL。
+
+五、Migration 的正確流程
+
+修改 Model 後，資料庫不會自動改變。一般流程是：
+
+1. 修改 models.py。
+2. 執行 python manage.py makemigrations，建立 migration 檔案。
+3. 檢查 migration 內容。
+4. 執行 python manage.py migrate，把變更套用到資料庫。
+5. 執行 python manage.py check 或測試，確認系統正常。
+
+Migration 檔案應保留在版本控制中，團隊成員才能使用相同的資料庫結構。正式資料庫在執行高風險 migration 前應先備份。
+
+六、網址到畫面的完整流程
+
+以課程詳細頁為例：
+
+1. 使用者要求 /course/1/。
+2. urls.py 解析路徑並把 course_id=1 傳給 View。
+3. View 使用 ORM 找出 ID 為 1 的課程。
+4. View 把課程資料放進 context。
+5. Template 讀取 context 並產生 HTML。
+6. Django 把 HTML response 回傳給瀏覽器。
+
+如果找不到課程，View 應回傳 404，而不是讓未處理的錯誤直接顯示給使用者。
+
+七、開發環境注意事項
+
+runserver 是開發伺服器，只適合本機開發與展示，不應直接作為正式環境伺服器。資料庫密碼、Azure OpenAI Key 與 Azure AI Search Key 都屬於機密，應保存在 .env，且不可上傳 GitHub。
+
+學習檢查重點：
+
+- manage.py 是管理指令入口。
+- Django 使用 MVT 架構概念。
+- Model 描述資料結構並透過 ORM 操作資料庫。
+- urls.py 把網址對應到 View。
+- migrate 會把 migration 套用到資料庫。

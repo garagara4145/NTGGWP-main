@@ -1,13 +1,4 @@
-"""測試專用設定：改用本機記憶體 SQLite，完全不碰共用雲端 MySQL。
-
-用法：
-    python manage.py test main --settings=myproject.settings_test
-
-為什麼不直接用 settings：共用雲端 MySQL 上跑 test 會嘗試 CREATE DATABASE
-test_<name>，那需要額外權限、跨網路跑 migration 很慢，而且測試資料庫名字固定
-—— 兩個組員同時跑測試會互相砍掉對方的測試庫。
-"""
-from .settings import *  # noqa: F401,F403
+from .settings import *
 
 DATABASES = {
     'default': {
@@ -16,6 +7,8 @@ DATABASES = {
     }
 }
 
-# 測試不需要密碼強度檢查，也不需要慢的 hasher
 AUTH_PASSWORD_VALIDATORS = []
 PASSWORD_HASHERS = ['django.contrib.auth.hashers.MD5PasswordHasher']
+
+# 測試不跑 collectstatic，改用一般靜態檔儲存；否則開 admin 頁會因缺少 manifest 而失敗。
+STORAGES = {**STORAGES, 'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'}}

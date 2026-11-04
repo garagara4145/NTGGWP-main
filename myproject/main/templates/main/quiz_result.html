@@ -1,0 +1,375 @@
+{% extends 'main/base_eduflow.html' %}
+{% block title %}測驗結果 | EduFlow{% endblock %}
+{% block extra_head %}{% include 'main/partials/lm_quiz_style.html' %}{% endblock %}
+
+{% block content %}
+<main class="lm">
+  <div class="lm-wrap">
+    <aside class="lm-side">
+      <a href="{% url 'watch_course' course.id %}" class="lm-back">← 返回課程</a>
+      <p class="lm-eyebrow">On this page</p>
+      <ol class="lm-path">
+        <li><a href="#score"><span class="lm-dot"></span>測驗成績</a></li>
+        <li><a href="#diagnosis"><span class="lm-dot"></span>AI 學習診斷</a></li>
+        {% if not attempt.is_passed %}<li><a href="#remedial"><span class="lm-dot"></span>AI 補救練習</a></li>{% endif %}
+        <li><a href="#review"><span class="lm-dot"></span>題目解析</a></li>
+      </ol>
+      {% if not attempt.is_passed %}
+      <div class="lm-progress" data-remedial-progress hidden>
+        <div class="lm-progress-row"><span>補救練習</span><span data-rp-count>0 / 0</span></div>
+        <div class="lm-bar"><i data-rp-bar></i></div>
+        <p style="margin:0">每題答對或查看解答後算完成。</p>
+      </div>
+      {% endif %}
+    </aside>
+
+    <section>
+      <!-- 01 成績 -->
+      <div class="lm-section" id="score">
+        <p class="lm-kicker"><b>01</b> / 測驗成績 · {{ course.title }} · 第 {{ chapter.sort_order }} 章</p>
+        <h1>{{ quiz.title }}</h1>
+        <div class="lm-score">
+          <span class="lm-score-num {% if attempt.is_passed %}is-pass{% else %}is-fail{% endif %}">{{ attempt.score }}</span>
+          <span>答對 {{ attempt.correct_count }} / {{ attempt.total_count }} 題 ·
+            {% if attempt.is_passed %}<b style="color:var(--green)">通過</b>{% else %}<b style="color:var(--red)">未達 {{ quiz.pass_score }} 分</b>{% endif %}</span>
+        </div>
+        {% if previous_attempt %}
+        <div class="lm-delta">
+          <span>上次 <b>{{ previous_attempt.score }}</b> 分</span><span>→</span><span>這次 <b>{{ attempt.score }}</b> 分</span>
+          {% if score_delta > 0 %}<span class="up">進步 {{ score_delta }} 分 ↑</span>
+          {% elif score_delta < 0 %}<span class="down">退步 {{ score_delta|stringformat:"d"|slice:"1:" }} 分 ↓</span>
+          {% else %}<span>持平</span>{% endif %}
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- 02 AI 學習診斷 -->
+      <div class="lm-section" id="diagnosis" data-diagnosis-box>
+        <p class="lm-kicker"><b>02</b> / AI 學習診斷</p>
+        <h2>你卡在哪裡？</h2>
+        <p class="lm-lead" style="margin-bottom:14px">依你在這門課的真實學習數據（完成率、觀看、測驗錯題）分析學習狀況。</p>
+        <button type="button" class="lm-btn" data-diagnosis-btn>分析我的學習狀況 ▷</button>
+        <div data-diagnosis-result hidden style="margin-top:16px">
+          <div class="lm-card lm-diagnosis" data-diagnosis-text></div>
+          <div class="lm-chips" data-diagnosis-topics></div>
+        </div>
+      </div>
+
+      <!-- 03 AI 補救練習 -->
+      {% if not attempt.is_passed %}
+      <div class="lm-section" id="remedial" data-remedial-box>
+        <p class="lm-kicker"><b>03</b> / AI 補救練習</p>
+        <h2>先練習，再重測</h2>
+        <p class="lm-lead" style="margin-bottom:14px">AI 會針對你答錯的觀念出 4 題練習。每題先選答案再確認；卡住可以看提示或解答。</p>
+        <button type="button" class="lm-btn lm-btn-yellow" data-remedial-btn>產生補救練習 ▷</button>
+        <div class="lm-note" data-remedial-status hidden></div>
+        <div data-remedial-list></div>
+        <div class="lm-panel" data-remedial-finish hidden>
+          <h3>補救練習完成</h3>
+          <p data-remedial-summary></p>
+          <a href="{% url 'take_quiz' chapter.id %}" class="lm-btn">回去重新測驗 →</a>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- 04 題目解析 -->
+      <div class="lm-section" id="review">
+        <p class="lm-kicker"><b>{% if attempt.is_passed %}03{% else %}04{% endif %}</b> / 題目解析</p>
+        <h2>逐題檢討</h2>
+        {% for a in answers %}
+        <article class="lm-q">
+          <p class="lm-kicker"><b>{{ forloop.counter|stringformat:"02d" }}</b> / {% if a.is_correct %}<span style="color:var(--green)">答對</span>{% else %}<span style="color:var(--red)">答錯</span>{% endif %}{% if a.question.topic_tag %} · {{ a.question.topic_tag }}{% endif %}</p>
+          <p class="lm-q-text">{{ a.question.question_text }}</p>
+          <div class="lm-opts">
+            {% for opt in a.question.options %}
+            <div class="lm-opt is-locked {% if forloop.counter0 == a.question.correct_index %}is-correct{% elif forloop.counter0 == a.selected_index %}is-wrong{% endif %}">
+              <span class="lm-radio" aria-hidden="true"></span>
+              <span>{{ opt }}</span>
+              {% if forloop.counter0 == a.question.correct_index %}<span class="lm-opt-tag">正解</span>
+              {% elif forloop.counter0 == a.selected_index %}<span class="lm-opt-tag">你的答案</span>{% endif %}
+            </div>
+            {% endfor %}
+          </div>
+          {% if a.selected_index < 0 %}<p class="lm-done" style="color:var(--red)">這題沒有作答</p>{% endif %}
+          {% if a.question.explanation %}<div class="lm-note {% if a.is_correct %}is-success{% endif %}"><b>解析：</b>{{ a.question.explanation }}</div>{% endif %}
+        </article>
+        {% endfor %}
+      </div>
+
+      <div class="lm-actions" style="margin-top:8px">
+        <a href="{% url 'take_quiz' chapter.id %}" class="lm-btn">再測一次</a>
+        <a href="{% url 'watch_course' course.id %}" class="lm-btn lm-btn-ghost">返回課程</a>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script>
+(function () {
+  const csrftoken = "{{ csrf_token }}";
+
+  function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s);
+    return d.innerHTML;
+  }
+
+  async function postJSON(url) {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+      body: JSON.stringify({}),
+    });
+    return res.json();
+  }
+
+  // 極輕量 Markdown：先跳脫 HTML，再處理 **粗體** 與 - / 數字清單
+  function renderMarkdown(md) {
+    const lines = esc(md).split('\n');
+    let html = '', listType = null;
+    const closeList = () => { if (listType) { html += `</${listType}>`; listType = null; } };
+    for (const raw of lines) {
+      const line = raw.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      const ulm = line.match(/^\s*[-・]\s+(.*)$/);
+      const olm = line.match(/^\s*\d+\.\s+(.*)$/);
+      const hm = line.match(/^\s*#{1,6}\s+(.*)$/);  // Markdown 標題（### 標題）
+      if (hm) {
+        closeList();
+        html += `<p><strong>${hm[1]}</strong></p>`;
+      } else if (ulm) {
+        if (listType !== 'ul') { closeList(); html += '<ul>'; listType = 'ul'; }
+        html += `<li>${ulm[1]}</li>`;
+      } else if (olm) {
+        if (listType !== 'ol') { closeList(); html += '<ol>'; listType = 'ol'; }
+        html += `<li>${olm[1]}</li>`;
+      } else if (line.trim() === '') {
+        closeList();
+      } else {
+        closeList();
+        html += `<p>${line}</p>`;
+      }
+    }
+    closeList();
+    return html;
+  }
+
+  // ---------- AI 學習診斷 ----------
+  (function () {
+    const box = document.querySelector('[data-diagnosis-box]');
+    if (!box) return;
+    const btn = box.querySelector('[data-diagnosis-btn]');
+    const wrap = box.querySelector('[data-diagnosis-result]');
+    const textEl = box.querySelector('[data-diagnosis-text]');
+    const topicsEl = box.querySelector('[data-diagnosis-topics]');
+    const url = "{% url 'learning_diagnosis' course.id %}";
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="lm-loading"></span> AI 分析中…';
+      try {
+        const data = await postJSON(url);
+        topicsEl.innerHTML = '';
+        if (data.ok) {
+          textEl.innerHTML = renderMarkdown(data.diagnosis);
+          (data.weak_topics || []).forEach(t => {
+            const chip = document.createElement('span');
+            chip.className = 'lm-chip is-warn';
+            chip.textContent = '需加強：' + t;
+            topicsEl.appendChild(chip);
+          });
+          btn.textContent = '重新分析 ▷';
+        } else {
+          textEl.innerHTML = '<p style="color:var(--red)">' + esc(data.error || '分析失敗，請稍後再試。') + '</p>';
+          btn.textContent = '再試一次 ▷';
+        }
+      } catch (e) {
+        textEl.innerHTML = '<p style="color:var(--red)">連線失敗，請稍後再試。</p>';
+        btn.textContent = '再試一次 ▷';
+      } finally {
+        wrap.hidden = false;
+        btn.disabled = false;
+      }
+    });
+  })();
+
+  // ---------- AI 補救練習：選答 → 確認 → 即時回饋，可看提示、解答、重設 ----------
+  (function () {
+    const box = document.querySelector('[data-remedial-box]');
+    if (!box) return;
+    const btn = box.querySelector('[data-remedial-btn]');
+    const statusEl = box.querySelector('[data-remedial-status]');
+    const listEl = box.querySelector('[data-remedial-list]');
+    const finishEl = box.querySelector('[data-remedial-finish]');
+    const summaryEl = box.querySelector('[data-remedial-summary]');
+    const progEl = document.querySelector('[data-remedial-progress]');
+    const progCount = document.querySelector('[data-rp-count]');
+    const progBar = document.querySelector('[data-rp-bar]');
+    const url = "{% url 'remedial_quiz' chapter.id %}";
+    const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
+    let states = [];
+
+    function setStatus(text, kind) {
+      statusEl.className = 'lm-note' + (kind ? ' is-' + kind : '');
+      statusEl.textContent = text;
+      statusEl.hidden = !text;
+    }
+
+    function updateProgress() {
+      const total = states.length;
+      const done = states.filter(s => s.done).length;
+      progEl.hidden = total === 0;
+      progCount.textContent = done + ' / ' + total;
+      progBar.style.width = (total ? done / total * 100 : 0) + '%';
+      if (total && done === total) {
+        const firstTry = states.filter(s => s.firstTry).length;
+        summaryEl.textContent = total + ' 題都完成了，其中 ' + firstTry + ' 題第一次就答對。'
+          + (firstTry === total ? '觀念已經掌握，回去重測看看進步多少！' : '把剛才答錯的觀念再看一次，再回去重測。');
+        finishEl.hidden = false;
+      } else {
+        finishEl.hidden = true;
+      }
+    }
+
+    function buildQuestion(q, qi) {
+      const st = { done: false, firstTry: false, attempts: 0, revealed: false, hintsUsed: [] };
+      states.push(st);
+
+      const art = document.createElement('article');
+      art.className = 'lm-q';
+      const opts = q.options.map((opt, oi) => `
+        <label class="lm-opt" data-opt="${oi}">
+          <input type="radio" name="rq_${qi}" value="${oi}">
+          <span class="lm-radio" aria-hidden="true"></span>
+          <span>${esc(opt)}</span>
+        </label>`).join('');
+      art.innerHTML = `
+        <p class="lm-kicker"><b>${String(qi + 1).padStart(2, '0')}</b> / 補救練習</p>
+        <p class="lm-q-text">${esc(q.question_text)}</p>
+        <div class="lm-opts" role="radiogroup" aria-label="補救練習第 ${qi + 1} 題">${opts}</div>
+        <div class="lm-actions">
+          <button type="button" class="lm-btn lm-btn-yellow" data-act="check">確認作答</button>
+          <button type="button" class="lm-link" data-act="hint">提示</button>
+          <button type="button" class="lm-link" data-act="reveal">查看解答</button>
+          <button type="button" class="lm-link lm-link-right" data-act="reset">重設本題 ↻</button>
+        </div>
+        <div class="lm-note" data-feedback hidden></div>
+        <p class="lm-done" data-done hidden>✓ 本題已完成</p>`;
+
+      const optEls = Array.from(art.querySelectorAll('[data-opt]'));
+      const inputs = Array.from(art.querySelectorAll('input'));
+      const feedback = art.querySelector('[data-feedback]');
+      const doneEl = art.querySelector('[data-done]');
+      const checkBtn = art.querySelector('[data-act="check"]');
+
+      function show(kind, html) {
+        feedback.className = 'lm-note' + (kind ? ' is-' + kind : '');
+        feedback.innerHTML = html;
+        feedback.hidden = false;
+      }
+      function picked() {
+        const c = art.querySelector('input:checked');
+        return c ? parseInt(c.value, 10) : -1;
+      }
+      function lock() {
+        inputs.forEach(i => { i.disabled = true; });
+        optEls.forEach(o => o.classList.add('is-locked'));
+        checkBtn.disabled = true;
+      }
+      function finish() {
+        st.done = true;
+        doneEl.hidden = false;
+        lock();
+        updateProgress();
+      }
+      const explain = q.explanation ? '\n' + esc(q.explanation) : '';
+
+      art.addEventListener('change', () => {
+        optEls.forEach(o => o.classList.remove('is-wrong'));
+      });
+
+      art.querySelector('[data-act="check"]').addEventListener('click', () => {
+        if (st.done) return;
+        const p = picked();
+        if (p < 0) { show('', '先選一個答案，再按確認。'); return; }
+        st.attempts++;
+        if (p === q.correct_index) {
+          if (st.attempts === 1 && !st.revealed) st.firstTry = true;
+          optEls[p].classList.add('is-correct');
+          show('success', '<b>答對了！</b>' + explain);
+          finish();
+        } else {
+          optEls[p].classList.add('is-wrong');
+          show('error', '<b>還不對。</b>再想一次，或按「提示」縮小範圍。');
+        }
+      });
+
+      art.querySelector('[data-act="hint"]').addEventListener('click', () => {
+        if (st.done) return;
+        if (q.hint && !st.hintsUsed.includes('ai')) {
+          st.hintsUsed.push('ai');
+          show('hint', '<b>提示：</b>' + esc(q.hint));
+          return;
+        }
+        // 沒有 AI 提示（或已看過）時，排除一個錯誤選項
+        const p = picked();
+        const candidates = q.options.map((_, i) => i)
+          .filter(i => i !== q.correct_index && !st.hintsUsed.includes(i));
+        const pick = candidates.includes(p) ? p : candidates[0];
+        if (pick === undefined) { show('hint', '<b>提示：</b>錯誤選項都已排除了，剩下的就是答案。'); return; }
+        st.hintsUsed.push(pick);
+        show('hint', '<b>提示：</b>可以先排除選項 ' + LETTERS[pick] + '「' + esc(q.options[pick]) + '」。');
+      });
+
+      art.querySelector('[data-act="reveal"]').addEventListener('click', () => {
+        if (st.done) return;
+        st.revealed = true;
+        optEls[q.correct_index].classList.add('is-correct');
+        show('', '<b>正解是 ' + LETTERS[q.correct_index] + '：</b>' + esc(q.options[q.correct_index]) + explain);
+        finish();
+      });
+
+      art.querySelector('[data-act="reset"]').addEventListener('click', () => {
+        Object.assign(st, { done: false, firstTry: false, attempts: 0, revealed: false, hintsUsed: [] });
+        inputs.forEach(i => { i.checked = false; i.disabled = false; });
+        optEls.forEach(o => o.classList.remove('is-correct', 'is-wrong', 'is-locked'));
+        checkBtn.disabled = false;
+        feedback.hidden = true;
+        doneEl.hidden = true;
+        updateProgress();
+      });
+
+      return art;
+    }
+
+    function render(questions) {
+      states = [];
+      listEl.innerHTML = '';
+      questions.forEach((q, qi) => listEl.appendChild(buildQuestion(q, qi)));
+      updateProgress();
+    }
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="lm-loading"></span> AI 出題中…';
+      setStatus('正在依你的錯題出題，大約需要 5～15 秒。', '');
+      try {
+        const data = await postJSON(url);
+        if (data.ok && Array.isArray(data.questions) && data.questions.length) {
+          setStatus('', '');
+          render(data.questions);
+          btn.textContent = '重新出題 ▷';
+        } else {
+          setStatus(data.error || '出題失敗，請稍後再試。', 'error');
+          btn.textContent = '再試一次 ▷';
+        }
+      } catch (e) {
+        setStatus('連線失敗，請稍後再試。', 'error');
+        btn.textContent = '再試一次 ▷';
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  })();
+})();
+</script>
+{% endblock %}

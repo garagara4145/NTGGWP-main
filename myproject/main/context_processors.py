@@ -1,6 +1,6 @@
-"""全站共用的模板 context（導覽列購物車數量、未讀通知數、角色、分類）。"""
-from .models import CartItem, Enrollment, Notification, Profile, CourseCategory
+from django.conf import settings
 
+from .models import CartItem, Enrollment, Notification, Profile, CourseCategory
 
 def nav_context(request):
     data = {
@@ -11,6 +11,7 @@ def nav_context(request):
         'nav_avatar_url': None,
         'nav_categories': CourseCategory.objects.order_by('name')[:8],
         'nav_enrolled_ids': set(),
+        'powerbi_embed_url': getattr(settings, 'POWERBI_EMBED_URL', ''),
     }
     user = getattr(request, 'user', None)
     if user and user.is_authenticated:

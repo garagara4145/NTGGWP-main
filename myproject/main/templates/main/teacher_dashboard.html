@@ -8,6 +8,7 @@
     <p class="text-slate-500 mb-5">歡迎，{{ request.user.username }}。管理你的課程、內容與銷售數據。</p>
     <div class="flex gap-3 flex-wrap">
       <a href="{% url 'create_course' %}" class="bg-brand-600 hover:bg-brand-700 text-white font-bold px-5 py-2.5 rounded-lg transition">＋ 新增課程</a>
+      <a href="{% url 'assignment_overview' %}" class="bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold px-5 py-2.5 rounded-lg transition">📝 作業批改總覽</a>
       <a href="{% url 'teacher_analytics' %}" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-5 py-2.5 rounded-lg transition">課程分析圖表</a>
       <a href="{% url 'teacher_qna' %}" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-5 py-2.5 rounded-lg transition">學生問題區</a>
       <a href="{% url 'my_revenue' %}" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-5 py-2.5 rounded-lg transition">我的收支</a>
@@ -60,6 +61,7 @@
       {% endif %}
       <div class="flex gap-2 flex-wrap">
         <a href="{% url 'manage_content' item.course.id %}" class="bg-brand-600 hover:bg-brand-700 text-white font-bold px-4 py-2 rounded-lg text-sm transition">內容管理</a>
+        <a href="{% url 'course_health' item.course.id %}" class="bg-violet-100 hover:bg-violet-200 text-violet-700 font-bold px-4 py-2 rounded-lg text-sm transition">🩺 課程健康度</a>
         <a href="{% url 'edit_course' item.course.id %}" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-lg text-sm transition">編輯課程</a>
         <a href="{% url 'submit_marketing_request' %}?course={{ item.course.id }}" class="bg-brand-50 hover:bg-brand-100 text-brand-700 font-bold px-4 py-2 rounded-lg text-sm transition">申請行銷</a>
         <a href="{% url 'delete_course' item.course.id %}" class="bg-red-50 hover:bg-red-100 text-red-600 font-bold px-4 py-2 rounded-lg text-sm transition">刪除</a>
